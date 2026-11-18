@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Handle, Position } from '@xyflow/react';
-import { Check, Plus, Focus, Trash2, CheckCircle2, Magnet } from 'lucide-react';
+import { Check, Plus, Focus, Trash2, CheckCircle2, Magnet, Palette } from 'lucide-react';
 import { MindMapNode } from '../../types/mindmap';
-import { useGraphStore } from '../../store/graphStore';
+import { useGraphStore, BRANCH_PALETTE } from '../../store/graphStore';
 
 interface TextTileNodeProps {
   id: string;
@@ -19,6 +19,7 @@ export const TextTileNode: React.FC<TextTileNodeProps> = ({ id, data, selected }
   const { node, isRoot, incomingSide = null } = data;
   const {
     updateNode,
+    updateNodeColor,
     addNode,
     deleteNode,
     toggleCompletion,
@@ -29,8 +30,10 @@ export const TextTileNode: React.FC<TextTileNodeProps> = ({ id, data, selected }
   } = useGraphStore();
 
   const [isEditing, setIsEditing] = useState(false);
+  const [showColorPicker, setShowColorPicker] = useState(false);
   const [titleText, setTitleText] = useState(node.title);
   const inputRef = useRef<HTMLInputElement>(null);
+  const colorPickerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setTitleText(node.title);
@@ -42,6 +45,19 @@ export const TextTileNode: React.FC<TextTileNodeProps> = ({ id, data, selected }
       inputRef.current.select();
     }
   }, [isEditing]);
+
+  // Click outside listener for color picker
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (colorPickerRef.current && !colorPickerRef.current.contains(e.target as Node)) {
+        setShowColorPicker(false);
+      }
+    };
+    if (showColorPicker) {
+      window.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => window.removeEventListener('mousedown', handleClickOutside);
+  }, [showColorPicker]);
 
   const handleBlur = () => {
     setIsEditing(false);
@@ -68,7 +84,6 @@ export const TextTileNode: React.FC<TextTileNodeProps> = ({ id, data, selected }
   const isCurrentCenter = activeCenterId === id;
 
   // Determine incoming target side
-  // Check either node.targetHandle or calculated incomingSide
   let effectiveIncoming = incomingSide;
   if (node.targetHandle) {
     if (node.targetHandle.startsWith('top')) effectiveIncoming = Position.Top;
@@ -89,15 +104,15 @@ export const TextTileNode: React.FC<TextTileNodeProps> = ({ id, data, selected }
           ? 'ring-2 ring-blue-500 shadow-md ring-offset-2 dark:ring-offset-zinc-950'
           : 'hover:border-slate-300 dark:hover:border-zinc-700'
       } ${
-        node.isCompleted
+        isRoot
+          ? '!bg-white !text-slate-900 border-slate-300 dark:border-zinc-200 shadow-md font-semibold'
+          : node.isCompleted
           ? 'bg-slate-50/75 dark:bg-zinc-900/40 border-slate-200 dark:border-zinc-800/80 opacity-70'
-          : isRoot
-          ? 'bg-blue-50/90 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800 shadow-blue-500/10'
           : 'bg-white dark:bg-zinc-900 border-slate-200/90 dark:border-zinc-800'
       }`}
       style={{
-        borderLeftWidth: '4px',
-        borderLeftColor: node.color || (isRoot ? '#3b82f6' : '#64748b')
+        borderLeftWidth: isRoot ? '5px' : '4px',
+        borderLeftColor: isRoot ? '#64748b' : (node.color || '#3b82f6')
       }}
     >
       {/* ======================================================== */}
@@ -119,16 +134,17 @@ export const TextTileNode: React.FC<TextTileNodeProps> = ({ id, data, selected }
             type="source"
             id="top-source"
             position={Position.Top}
-            className="!w-2.5 !h-2.5 !-top-1.5 !bg-blue-500 !border-2 !border-white dark:!border-zinc-900 opacity-60 group-hover:opacity-100 transition-opacity"
+            className="!w-2.5 !h-2.5 !-top-1.5 !border-2 !border-white dark:!border-zinc-900 opacity-60 group-hover:opacity-100 transition-opacity"
+            style={{ backgroundColor: node.color || '#3b82f6' }}
             title="Branch from Top"
           />
-          {/* Quick Add Button Top */}
           <button
             onClick={(e) => {
               e.stopPropagation();
               addNode(id, 'New Thought', 'top');
             }}
-            className="absolute -top-3 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-blue-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:scale-125 z-10 shadow-xs text-[10px]"
+            className="absolute -top-3 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:scale-125 z-10 shadow-xs text-[10px]"
+            style={{ backgroundColor: node.color || '#3b82f6' }}
             title="Add Branch (Top)"
           >
             +
@@ -151,16 +167,17 @@ export const TextTileNode: React.FC<TextTileNodeProps> = ({ id, data, selected }
             type="source"
             id="bottom-source"
             position={Position.Bottom}
-            className="!w-2.5 !h-2.5 !-bottom-1.5 !bg-blue-500 !border-2 !border-white dark:!border-zinc-900 opacity-60 group-hover:opacity-100 transition-opacity"
+            className="!w-2.5 !h-2.5 !-bottom-1.5 !border-2 !border-white dark:!border-zinc-900 opacity-60 group-hover:opacity-100 transition-opacity"
+            style={{ backgroundColor: node.color || '#3b82f6' }}
             title="Branch from Bottom"
           />
-          {/* Quick Add Button Bottom */}
           <button
             onClick={(e) => {
               e.stopPropagation();
               addNode(id, 'New Thought', 'bottom');
             }}
-            className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-blue-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:scale-125 z-10 shadow-xs text-[10px]"
+            className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:scale-125 z-10 shadow-xs text-[10px]"
+            style={{ backgroundColor: node.color || '#3b82f6' }}
             title="Add Branch (Bottom)"
           >
             +
@@ -183,16 +200,17 @@ export const TextTileNode: React.FC<TextTileNodeProps> = ({ id, data, selected }
             type="source"
             id="left-source"
             position={Position.Left}
-            className="!w-2.5 !h-2.5 !-left-1.5 !bg-blue-500 !border-2 !border-white dark:!border-zinc-900 opacity-60 group-hover:opacity-100 transition-opacity"
+            className="!w-2.5 !h-2.5 !-left-1.5 !border-2 !border-white dark:!border-zinc-900 opacity-60 group-hover:opacity-100 transition-opacity"
+            style={{ backgroundColor: node.color || '#3b82f6' }}
             title="Branch from Left"
           />
-          {/* Quick Add Button Left */}
           <button
             onClick={(e) => {
               e.stopPropagation();
               addNode(id, 'New Thought', 'left');
             }}
-            className="absolute -left-3 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-blue-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:scale-125 z-10 shadow-xs text-[10px]"
+            className="absolute -left-3 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:scale-125 z-10 shadow-xs text-[10px]"
+            style={{ backgroundColor: node.color || '#3b82f6' }}
             title="Add Branch (Left)"
           >
             +
@@ -215,16 +233,17 @@ export const TextTileNode: React.FC<TextTileNodeProps> = ({ id, data, selected }
             type="source"
             id="right-source"
             position={Position.Right}
-            className="!w-2.5 !h-2.5 !-right-1.5 !bg-blue-500 !border-2 !border-white dark:!border-zinc-900 opacity-60 group-hover:opacity-100 transition-opacity"
+            className="!w-2.5 !h-2.5 !-right-1.5 !border-2 !border-white dark:!border-zinc-900 opacity-60 group-hover:opacity-100 transition-opacity"
+            style={{ backgroundColor: node.color || '#3b82f6' }}
             title="Branch from Right"
           />
-          {/* Quick Add Button Right */}
           <button
             onClick={(e) => {
               e.stopPropagation();
               addNode(id, 'New Thought', 'right');
             }}
-            className="absolute -right-3 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-blue-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:scale-125 z-10 shadow-xs text-[10px]"
+            className="absolute -right-3 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:scale-125 z-10 shadow-xs text-[10px]"
+            style={{ backgroundColor: node.color || '#3b82f6' }}
             title="Add Branch (Right)"
           >
             +
@@ -233,21 +252,65 @@ export const TextTileNode: React.FC<TextTileNodeProps> = ({ id, data, selected }
       )}
 
       {/* ======================================================== */}
+      {/* COLOR PICKER POPOVER */}
+      {/* ======================================================== */}
+      {showColorPicker && (
+        <div
+          ref={colorPickerRef}
+          onClick={(e) => e.stopPropagation()}
+          className="absolute top-9 left-2 z-50 p-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-xl flex flex-col gap-2 animate-in fade-in zoom-in-95 duration-150"
+        >
+          <div className="text-[10px] font-bold text-slate-500 dark:text-zinc-400 px-0.5 uppercase tracking-wider">
+            Branch Color
+          </div>
+          <div className="grid grid-cols-4 gap-1.5">
+            {BRANCH_PALETTE.map((color) => (
+              <button
+                key={color}
+                onClick={() => {
+                  updateNodeColor(id, color, true);
+                  setShowColorPicker(false);
+                }}
+                className={`w-5 h-5 rounded-full transition hover:scale-125 border-2 ${
+                  node.color === color ? 'border-slate-800 dark:border-white scale-110 shadow-xs' : 'border-white dark:border-zinc-900'
+                }`}
+                style={{ backgroundColor: color }}
+                title={color}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
       {/* CARD CONTENT */}
       {/* ======================================================== */}
 
-      {/* Top Header: Level Badge, Progress, Actions */}
+      {/* Top Header: Level Badge, Color Dot, Progress, Actions */}
       <div className="flex items-center justify-between gap-1 mb-1.5">
         <div className="flex items-center gap-1.5">
           <span
             className={`text-[10px] font-semibold tracking-wider uppercase px-1.5 py-0.5 rounded ${
               isRoot
-                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/60 dark:text-blue-300'
+                ? 'bg-slate-100 text-slate-700 border border-slate-200 font-bold'
                 : 'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400'
             }`}
           >
             {isRoot ? 'Center' : `L${node.level}`}
           </span>
+
+          {/* Color Indicator Dot */}
+          {!isRoot && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowColorPicker(!showColorPicker);
+              }}
+              className="w-2.5 h-2.5 rounded-full hover:scale-125 transition shrink-0 shadow-xs border border-white dark:border-zinc-900"
+              style={{ backgroundColor: node.color || '#3b82f6' }}
+              title="Click to change branch color"
+            />
+          )}
 
           {hasChildren && (
             <span className="text-[10px] text-slate-400 dark:text-zinc-500 flex items-center gap-0.5 font-medium">
@@ -259,6 +322,20 @@ export const TextTileNode: React.FC<TextTileNodeProps> = ({ id, data, selected }
 
         {/* Hover Quick Action Buttons */}
         <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          {/* Color Palette Picker Button */}
+          {!isRoot && (
+            <button
+              title="Change Branch Color"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowColorPicker(!showColorPicker);
+              }}
+              className="p-1 rounded text-slate-400 hover:text-purple-500 hover:bg-slate-100 dark:hover:bg-zinc-800 transition"
+            >
+              <Palette className="w-3.5 h-3.5" />
+            </button>
+          )}
+
           {/* Reconnect to Closest Points on Parent */}
           {!isRoot && (
             <button
@@ -337,7 +414,9 @@ export const TextTileNode: React.FC<TextTileNodeProps> = ({ id, data, selected }
             onChange={(e) => setTitleText(e.target.value)}
             onBlur={handleBlur}
             onKeyDown={handleKeyDown}
-            className="w-full text-xs font-semibold bg-transparent border-b border-blue-500 outline-none px-0 py-0 text-slate-900 dark:text-zinc-100"
+            className={`w-full text-xs font-semibold bg-transparent border-b border-blue-500 outline-none px-0 py-0 ${
+              isRoot ? 'text-slate-900 font-bold' : 'text-slate-900 dark:text-zinc-100'
+            }`}
           />
         ) : (
           <div
@@ -345,6 +424,8 @@ export const TextTileNode: React.FC<TextTileNodeProps> = ({ id, data, selected }
             className={`text-xs leading-snug cursor-text font-semibold select-text break-words w-full ${
               node.isCompleted
                 ? 'line-through text-slate-400 dark:text-zinc-500'
+                : isRoot
+                ? 'text-slate-900 font-bold'
                 : 'text-slate-800 dark:text-zinc-100'
             }`}
             title="Double click to edit"
@@ -356,7 +437,7 @@ export const TextTileNode: React.FC<TextTileNodeProps> = ({ id, data, selected }
 
       {/* Notes preview if available */}
       {node.notes && (
-        <p className="mt-1.5 text-[11px] text-slate-400 dark:text-zinc-500 line-clamp-1 italic">
+        <p className={`mt-1.5 text-[11px] line-clamp-1 italic ${isRoot ? 'text-slate-500' : 'text-slate-400 dark:text-zinc-500'}`}>
           {node.notes}
         </p>
       )}

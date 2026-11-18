@@ -4,6 +4,17 @@ import { findClosestPortPair } from '../utils/layout';
 
 export type ActiveView = 'canvas' | 'kanban' | 'outline' | 'presentation';
 
+export const BRANCH_PALETTE = [
+  '#3b82f6', // Blue
+  '#10b981', // Emerald
+  '#8b5cf6', // Violet
+  '#f59e0b', // Amber
+  '#f43f5e', // Rose
+  '#06b6d4', // Cyan
+  '#f97316', // Orange
+  '#6366f1'  // Indigo
+];
+
 interface GraphState {
   document: MindMapDocument;
   selectedNodeId: string | null;
@@ -24,6 +35,7 @@ interface GraphState {
   // Node Operations
   addNode: (parentId: string | null, title?: string, initialDirection?: 'right' | 'left' | 'top' | 'bottom') => string;
   updateNode: (id: string, updates: Partial<MindMapNode>) => void;
+  updateNodeColor: (id: string, newColor: string, updateChildren?: boolean) => void;
   deleteNode: (id: string) => void;
   toggleCompletion: (id: string) => void;
   setNodeStatus: (id: string, status: NodeStatus) => void;
@@ -66,7 +78,7 @@ const createDefaultDocument = (title = 'Main Vision'): MindMapDocument => {
       order: 0,
       status: 'in_progress',
       isCompleted: false,
-      color: '#3b82f6',
+      color: '#ffffff',
       createdAt: now,
       updatedAt: now
     },
@@ -203,6 +215,16 @@ export const useGraphStore = create<GraphState>((set, get) => {
         }
       }
 
+      // Determine color:
+      // If connected to root, pick from BRANCH_PALETTE so each new primary branch gets a distinct vibrant color
+      // Otherwise, copy parent's color
+      let nodeColor = '#3b82f6';
+      if (parentId === state.document.rootNodeId) {
+        nodeColor = BRANCH_PALETTE[siblings.length % BRANCH_PALETTE.length];
+      } else if (parent && parent.color && parent.color !== '#ffffff') {
+        nodeColor = parent.color;
+      }
+
       const newNode: MindMapNode = {
         id: newId,
         parentId,
@@ -212,7 +234,7 @@ export const useGraphStore = create<GraphState>((set, get) => {
         order,
         status: 'todo',
         isCompleted: false,
-        color: parent?.color || '#3b82f6',
+        color: nodeColor,
         sourceHandle,
         targetHandle,
         createdAt: now,
@@ -255,6 +277,40 @@ export const useGraphStore = create<GraphState>((set, get) => {
           ...state.document.nodes,
           [id]: updatedNode
         }
+      };
+
+      set({
+        ...recordSnapshot(state),
+        document: newDoc
+      });
+
+      get().saveCurrentDocument();
+    },
+
+    updateNodeColor: (id, newColor, updateChildren = true) => {
+      const state = get();
+      const node = state.document.nodes[id];
+      if (!node) return;
+
+      const oldColor = node.color;
+      const updatedNodes = { ...state.document.nodes };
+      updatedNodes[id] = { ...node, color: newColor };
+
+      if (updateChildren) {
+        const updateDescendants = (parentId: string) => {
+          Object.values(updatedNodes).forEach(child => {
+            if (child.parentId === parentId && (!child.color || child.color === oldColor)) {
+              updatedNodes[child.id] = { ...child, color: newColor };
+              updateDescendants(child.id);
+            }
+          });
+        };
+        updateDescendants(id);
+      }
+
+      const newDoc = {
+        ...state.document,
+        nodes: updatedNodes
       };
 
       set({
