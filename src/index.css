@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-canvas: #f8fafc;
+    --canvas-dots: #cbd5e1;
+    --card-bg: #ffffff;
+    --card-border: #e2e8f0;
+    --card-text: #0f172a;
+    --card-muted: #64748b;
+  }
+
+  .dark {
+    --bg-canvas: #09090b;
+    --canvas-dots: #27272a;
+    --card-bg: #18181b;
+    --card-border: #27272a;
+    --card-text: #f4f4f5;
+    --card-muted: #a1a1aa;
+  }
+}
+
+/* React Flow Canvas tweaks for clean modern styling */
+.react-flow__background {
+  background-color: var(--bg-canvas);
+}
+
+.react-flow__handle {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background-color: #3b82f6;
+  border: 2px solid white;
+}
+
+.dark .react-flow__handle {
+  border-color: #18181b;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.6);
+}
