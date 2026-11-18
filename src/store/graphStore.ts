@@ -398,7 +398,33 @@ export const useGraphStore = create<GraphState>((set, get) => {
         });
       };
 
+      // Upward propagation:
+      // If all children of a parent are checked, parent is checked.
+      // If one child is unchecked, parent is unchecked.
+      const propagateUpward = (startId: string) => {
+        let currentId: string | null = updatedNodes[startId]?.parentId;
+        while (currentId) {
+          const parent = updatedNodes[currentId];
+          if (!parent) break;
+
+          const siblings = Object.values(updatedNodes).filter(n => n.parentId === currentId);
+          if (siblings.length > 0) {
+            const allCompleted = siblings.every(s => s.isCompleted);
+            if (parent.isCompleted !== allCompleted) {
+              updatedNodes[currentId] = {
+                ...parent,
+                isCompleted: allCompleted,
+                status: allCompleted ? 'completed' : (siblings.some(s => s.isCompleted || s.status === 'in_progress') ? 'in_progress' : 'todo'),
+                updatedAt: now
+              };
+            }
+          }
+          currentId = parent.parentId;
+        }
+      };
+
       cascadeDescendants(id, newIsCompleted);
+      propagateUpward(id);
 
       const newDoc = {
         ...state.document,
@@ -444,7 +470,31 @@ export const useGraphStore = create<GraphState>((set, get) => {
         });
       };
 
+      // Upward propagation for status change
+      const propagateUpward = (startId: string) => {
+        let currentId: string | null = updatedNodes[startId]?.parentId;
+        while (currentId) {
+          const parent = updatedNodes[currentId];
+          if (!parent) break;
+
+          const siblings = Object.values(updatedNodes).filter(n => n.parentId === currentId);
+          if (siblings.length > 0) {
+            const allCompleted = siblings.every(s => s.isCompleted);
+            if (parent.isCompleted !== allCompleted) {
+              updatedNodes[currentId] = {
+                ...parent,
+                isCompleted: allCompleted,
+                status: allCompleted ? 'completed' : (siblings.some(s => s.isCompleted || s.status === 'in_progress') ? 'in_progress' : 'todo'),
+                updatedAt: now
+              };
+            }
+          }
+          currentId = parent.parentId;
+        }
+      };
+
       cascadeDescendants(id, isCompleted);
+      propagateUpward(id);
 
       const newDoc = {
         ...state.document,
