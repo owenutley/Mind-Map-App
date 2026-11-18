@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useCallback } from 'react';
+import React, { useMemo, useEffect, useCallback, useRef } from 'react';
 import {
   ReactFlow,
   Background,
@@ -34,8 +34,9 @@ const InnerCanvas: React.FC = () => {
 
   const effectiveTheme = useThemeStore(s => s.effectiveTheme);
   const { fitView } = useReactFlow();
+  const initialFitDone = useRef(false);
 
-  // Compute D3 tree layout positions
+  // Compute balanced multi-directional D3 tree layout
   const { nodes: layoutNodes, edges: layoutEdges } = useMemo(() => {
     return computeMindMapLayout(doc, activeCenterId);
   }, [doc, activeCenterId]);
@@ -43,15 +44,7 @@ const InnerCanvas: React.FC = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState(layoutNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(layoutEdges);
 
-  // Smoothly center when activeCenterId or layout changes
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      fitView({ padding: 0.35, duration: 300 });
-    }, 50);
-    return () => clearTimeout(timer);
-  }, [activeCenterId, fitView]);
-
-  // Sync state when document changes
+  // Sync state when layout changes
   useEffect(() => {
     setNodes(
       layoutNodes.map(n => ({
@@ -62,10 +55,23 @@ const InnerCanvas: React.FC = () => {
     setEdges(layoutEdges);
   }, [layoutNodes, layoutEdges, selectedNodeId, setNodes, setEdges]);
 
-  // Handle global keyboard shortcuts for thought chaining
+  // Clean initial camera framing with generous margins
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fitView({
+        padding: 0.28,
+        maxZoom: 1.05,
+        minZoom: 0.55,
+        duration: initialFitDone.current ? 350 : 0
+      });
+      initialFitDone.current = true;
+    }, 60);
+    return () => clearTimeout(timer);
+  }, [activeCenterId, fitView]);
+
+  // Keyboard shortcuts for perpetual thought chaining
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      // Don't trigger if typing in an input or textarea
       const target = e.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
 
@@ -73,11 +79,9 @@ const InnerCanvas: React.FC = () => {
 
       if (e.key === 'Tab') {
         e.preventDefault();
-        // Add child thought
         addNode(selectedNodeId, 'New Branch');
       } else if (e.key === 'Enter') {
         e.preventDefault();
-        // Add sibling thought
         const currentNode = doc.nodes[selectedNodeId];
         if (currentNode) {
           addNode(currentNode.parentId, 'New Thought');
@@ -122,15 +126,17 @@ const InnerCanvas: React.FC = () => {
         onPaneClick={onPaneClick}
         nodeTypes={nodeTypes}
         fitView
-        fitViewOptions={{ padding: 0.35, duration: 400 }}
+        fitViewOptions={{ padding: 0.28, maxZoom: 1.05, minZoom: 0.55 }}
         minZoom={0.2}
-        maxZoom={2.5}
-        defaultEdgeOptions={{ type: 'smoothstep' }}
+        maxZoom={2.2}
+        defaultEdgeOptions={{
+          type: 'smoothstep'
+        }}
         proOptions={{ hideAttribution: true }}
       >
         <Background
           variant={BackgroundVariant.Dots}
-          gap={24}
+          gap={26}
           size={1.5}
           color={effectiveTheme === 'dark' ? '#27272a' : '#cbd5e1'}
         />
