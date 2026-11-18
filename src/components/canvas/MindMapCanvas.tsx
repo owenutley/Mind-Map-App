@@ -35,7 +35,8 @@ const InnerCanvas: React.FC = () => {
     toggleCompletion,
     updateNode,
     updateNodePosition,
-    reconnectAllClosest
+    reconnectAllClosest,
+    hideCompleted
   } = useGraphStore();
 
   const effectiveTheme = useThemeStore(s => s.effectiveTheme);
@@ -44,8 +45,8 @@ const InnerCanvas: React.FC = () => {
 
   // Compute balanced multi-directional D3 tree layout
   const { nodes: layoutNodes, edges: layoutEdges } = useMemo(() => {
-    return computeMindMapLayout(doc, activeCenterId);
-  }, [doc, activeCenterId]);
+    return computeMindMapLayout(doc, activeCenterId, hideCompleted);
+  }, [doc, activeCenterId, hideCompleted]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(layoutNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(layoutEdges);

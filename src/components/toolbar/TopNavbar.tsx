@@ -12,7 +12,9 @@ import {
   Download,
   Upload,
   Check,
-  Loader2
+  Loader2,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { useGraphStore, ActiveView } from '../../store/graphStore';
 import { useThemeStore } from '../../store/themeStore';
@@ -33,7 +35,9 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onOpenVault }) => {
     redo,
     canUndo,
     canRedo,
-    loadDocument
+    loadDocument,
+    hideCompleted,
+    toggleHideCompleted
   } = useGraphStore();
 
   const { effectiveTheme, toggleTheme } = useThemeStore();
@@ -185,6 +189,24 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onOpenVault }) => {
             <Redo2 className="w-4 h-4" />
           </button>
         </div>
+
+        <div className="h-4 w-px bg-slate-200 dark:bg-zinc-800" />
+
+        {/* Toggle Hide Completed Checkboxes / Items */}
+        <button
+          onClick={toggleHideCompleted}
+          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium transition ${
+            hideCompleted
+              ? 'bg-amber-100 dark:bg-amber-950/60 border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-200 font-semibold'
+              : 'border-slate-200 dark:border-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-600 dark:text-zinc-300'
+          }`}
+          title={hideCompleted ? 'Show completed thoughts' : 'Hide completed thoughts'}
+        >
+          {hideCompleted ? <EyeOff className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" /> : <Eye className="w-3.5 h-3.5 text-slate-400" />}
+          <span className="hidden sm:inline">
+            {hideCompleted ? 'Done Hidden' : 'Hide Done'}
+          </span>
+        </button>
 
         <div className="h-4 w-px bg-slate-200 dark:bg-zinc-800" />
 

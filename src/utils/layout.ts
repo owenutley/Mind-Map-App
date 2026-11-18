@@ -59,7 +59,8 @@ export function findClosestPortPair(
 
 export function computeMindMapLayout(
   doc: MindMapDocument,
-  centerId?: string
+  centerId?: string,
+  hideCompleted = false
 ): ComputedLayoutResult {
   const rootId = centerId && doc.nodes[centerId] ? centerId : doc.rootNodeId;
   const rootNode = doc.nodes[rootId];
@@ -81,9 +82,9 @@ export function computeMindMapLayout(
     }
   });
 
-  // Get direct children of the center node
+  // Get direct children of the center node (filter out completed if setting is active)
   const directChildren = Object.values(doc.nodes)
-    .filter(n => n.parentId === rootId)
+    .filter(n => n.parentId === rootId && (!hideCompleted || !n.isCompleted))
     .sort((a, b) => a.order - b.order);
 
   if (directChildren.length === 0) {
@@ -113,7 +114,7 @@ export function computeMindMapLayout(
   const buildSubtree = (nodeId: string, direction: BranchDirection): HierarchyDatum => {
     const node = doc.nodes[nodeId];
     const children = Object.values(doc.nodes)
-      .filter(n => n.parentId === nodeId)
+      .filter(n => n.parentId === nodeId && (!hideCompleted || !n.isCompleted))
       .sort((a, b) => a.order - b.order)
       .map(c => buildSubtree(c.id, direction));
 

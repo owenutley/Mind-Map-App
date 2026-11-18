@@ -15,7 +15,7 @@ import { useGraphStore } from '../../store/graphStore';
 import { Filter, Layers } from 'lucide-react';
 
 export const KanbanBoard: React.FC = () => {
-  const { document: doc, setNodeStatus, addNode } = useGraphStore();
+  const { document: doc, setNodeStatus, addNode, hideCompleted } = useGraphStore();
   const [activeDragNode, setActiveDragNode] = useState<MindMapNode | null>(null);
   const [levelFilter, setLevelFilter] = useState<string>('all');
 
@@ -27,13 +27,16 @@ export const KanbanBoard: React.FC = () => {
     })
   );
 
-  // Filter nodes based on selected level
+  // Filter nodes based on selected level and hideCompleted setting
   const filteredNodes = useMemo(() => {
-    const all = Object.values(doc.nodes);
+    let all = Object.values(doc.nodes);
+    if (hideCompleted) {
+      all = all.filter(n => !n.isCompleted || n.id === doc.rootNodeId);
+    }
     if (levelFilter === 'all') return all;
     const targetLevel = parseInt(levelFilter, 10);
     return all.filter(n => n.level === targetLevel);
-  }, [doc.nodes, levelFilter]);
+  }, [doc.nodes, levelFilter, hideCompleted]);
 
   // Group into the 3 status columns
   const todoNodes = useMemo(

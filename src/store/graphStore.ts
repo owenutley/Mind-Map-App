@@ -20,6 +20,7 @@ interface GraphState {
   selectedNodeId: string | null;
   activeCenterId: string;
   activeView: ActiveView;
+  hideCompleted: boolean;
   isSaving: boolean;
   lastSavedAt: string | null;
   
@@ -31,6 +32,7 @@ interface GraphState {
   setSelectedNodeId: (id: string | null) => void;
   setActiveCenterId: (id: string) => void;
   setActiveView: (view: ActiveView) => void;
+  toggleHideCompleted: () => void;
   
   // Node Operations
   addNode: (parentId: string | null, title?: string, initialDirection?: 'right' | 'left' | 'top' | 'bottom') => string;
@@ -177,6 +179,7 @@ export const useGraphStore = create<GraphState>((set, get) => {
     selectedNodeId: initialDoc.rootNodeId,
     activeCenterId: initialDoc.rootNodeId,
     activeView: 'canvas',
+    hideCompleted: false,
     isSaving: false,
     lastSavedAt: null,
     past: [],
@@ -185,6 +188,7 @@ export const useGraphStore = create<GraphState>((set, get) => {
     setSelectedNodeId: (id) => set({ selectedNodeId: id }),
     setActiveCenterId: (id) => set({ activeCenterId: id }),
     setActiveView: (view) => set({ activeView: view }),
+    toggleHideCompleted: () => set((state) => ({ hideCompleted: !state.hideCompleted })),
 
     addNode: (parentId, title = 'New Thought', initialDirection) => {
       const state = get();
@@ -367,15 +371,92 @@ export const useGraphStore = create<GraphState>((set, get) => {
       const node = state.document.nodes[id];
       if (!node) return;
 
-      const isCompleted = !node.isCompleted;
-      const status: NodeStatus = isCompleted ? 'completed' : 'todo';
+      const newIsCompleted = !node.isCompleted;
+      const newStatus: NodeStatus = newIsCompleted ? 'completed' : 'todo';
+      const updatedNodes = { ...state.document.nodes };
+      const now = new Date().toISOString();
 
-      get().updateNode(id, { isCompleted, status });
+      updatedNodes[id] = {
+        ...node,
+        isCompleted: newIsCompleted,
+        status: newStatus,
+        updatedAt: now
+      };
+
+      // Cascade completion state to all children/descendants
+      const cascadeDescendants = (parentId: string, completed: boolean) => {
+        Object.values(updatedNodes).forEach(child => {
+          if (child.parentId === parentId) {
+            updatedNodes[child.id] = {
+              ...child,
+              isCompleted: completed,
+              status: completed ? 'completed' : 'todo',
+              updatedAt: now
+            };
+            cascadeDescendants(child.id, completed);
+          }
+        });
+      };
+
+      cascadeDescendants(id, newIsCompleted);
+
+      const newDoc = {
+        ...state.document,
+        nodes: updatedNodes
+      };
+
+      set({
+        ...recordSnapshot(state),
+        document: newDoc
+      });
+
+      get().saveCurrentDocument();
     },
 
     setNodeStatus: (id, status) => {
+      const state = get();
+      const node = state.document.nodes[id];
+      if (!node) return;
+
       const isCompleted = status === 'completed';
-      get().updateNode(id, { status, isCompleted });
+      const updatedNodes = { ...state.document.nodes };
+      const now = new Date().toISOString();
+
+      updatedNodes[id] = {
+        ...node,
+        status,
+        isCompleted,
+        updatedAt: now
+      };
+
+      // Cascade completion state if marked completed or moved back to todo
+      const cascadeDescendants = (parentId: string, completed: boolean) => {
+        Object.values(updatedNodes).forEach(child => {
+          if (child.parentId === parentId) {
+            updatedNodes[child.id] = {
+              ...child,
+              isCompleted: completed,
+              status: completed ? 'completed' : status,
+              updatedAt: now
+            };
+            cascadeDescendants(child.id, completed);
+          }
+        });
+      };
+
+      cascadeDescendants(id, isCompleted);
+
+      const newDoc = {
+        ...state.document,
+        nodes: updatedNodes
+      };
+
+      set({
+        ...recordSnapshot(state),
+        document: newDoc
+      });
+
+      get().saveCurrentDocument();
     },
 
     reparentNode: (id, newParentId) => {

@@ -23,15 +23,20 @@ const OutlineItem: React.FC<OutlineItemProps> = ({ node, depth }) => {
     addNode,
     deleteNode,
     setSelectedNodeId,
-    setActiveView
+    setActiveView,
+    hideCompleted
   } = useGraphStore();
 
   const [isExpanded, setIsExpanded] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [text, setText] = useState(node.title);
 
+  if (hideCompleted && node.isCompleted && node.id !== doc.rootNodeId) {
+    return null;
+  }
+
   const children = Object.values(doc.nodes)
-    .filter(n => n.parentId === node.id)
+    .filter(n => n.parentId === node.id && (!hideCompleted || !n.isCompleted))
     .sort((a, b) => a.order - b.order);
 
   const hasChildren = children.length > 0;

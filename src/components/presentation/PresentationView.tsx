@@ -12,7 +12,7 @@ import { useGraphStore } from '../../store/graphStore';
 import { getAncestorBreadcrumbs } from '../../utils/layout';
 
 export const PresentationView: React.FC = () => {
-  const { document: doc, setActiveView, toggleCompletion } = useGraphStore();
+  const { document: doc, setActiveView, toggleCompletion, hideCompleted } = useGraphStore();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -22,15 +22,17 @@ export const PresentationView: React.FC = () => {
     const walk = (id: string) => {
       const node = doc.nodes[id];
       if (!node) return;
-      list.push(node);
+      if (!hideCompleted || !node.isCompleted || id === doc.rootNodeId) {
+        list.push(node);
+      }
       const children = Object.values(doc.nodes)
-        .filter(n => n.parentId === id)
+        .filter(n => n.parentId === id && (!hideCompleted || !n.isCompleted))
         .sort((a, b) => a.order - b.order);
       children.forEach(c => walk(c.id));
     };
     walk(doc.rootNodeId);
     return list;
-  }, [doc.nodes, doc.rootNodeId]);
+  }, [doc.nodes, doc.rootNodeId, hideCompleted]);
 
   const currentNode = orderedNodes[currentIndex] || orderedNodes[0];
 
