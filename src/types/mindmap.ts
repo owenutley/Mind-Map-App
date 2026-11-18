@@ -11,6 +11,9 @@ export interface MindMapNode {
   isCompleted: boolean;          // Quick toggle (status === 'completed')
   color?: string;                // Custom node color or branch tint
   isCollapsed?: boolean;         // Child branch collapsing
+  position?: { x: number; y: number }; // Optional persisted custom coordinates
+  sourceHandle?: string;         // 'top-source' | 'right-source' | 'bottom-source' | 'left-source'
+  targetHandle?: string;         // 'top-target' | 'right-target' | 'bottom-target' | 'left-target'
   createdAt: string;
   updatedAt: string;
 }

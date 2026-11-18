@@ -9,9 +9,12 @@ import {
   NodeMouseHandler,
   useReactFlow,
   ReactFlowProvider,
-  BackgroundVariant
+  BackgroundVariant,
+  Connection,
+  OnConnect
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import { Magnet, Sparkles } from 'lucide-react';
 import { TextTileNode } from './TextTileNode';
 import { useGraphStore } from '../../store/graphStore';
 import { useThemeStore } from '../../store/themeStore';
@@ -29,7 +32,10 @@ const InnerCanvas: React.FC = () => {
     setSelectedNodeId,
     addNode,
     deleteNode,
-    toggleCompletion
+    toggleCompletion,
+    updateNode,
+    updateNodePosition,
+    reconnectAllClosest
   } = useGraphStore();
 
   const effectiveTheme = useThemeStore(s => s.effectiveTheme);
@@ -68,6 +74,27 @@ const InnerCanvas: React.FC = () => {
     }, 60);
     return () => clearTimeout(timer);
   }, [activeCenterId, fitView]);
+
+  // Update node position when dragged
+  const onNodeDragStop = useCallback(
+    (_: React.MouseEvent | unknown, node: { id: string; position: { x: number; y: number } }) => {
+      updateNodePosition(node.id, node.position);
+    },
+    [updateNodePosition]
+  );
+
+  // Handle manual interactive connection between ports
+  const onConnect: OnConnect = useCallback(
+    (connection: Connection) => {
+      if (!connection.target || !connection.source) return;
+      updateNode(connection.target, {
+        parentId: connection.source,
+        sourceHandle: connection.sourceHandle || undefined,
+        targetHandle: connection.targetHandle || undefined
+      });
+    },
+    [updateNode]
+  );
 
   // Keyboard shortcuts for perpetual thought chaining
   const handleKeyDown = useCallback(
@@ -115,14 +142,57 @@ const InnerCanvas: React.FC = () => {
     setSelectedNodeId(null);
   }, [setSelectedNodeId]);
 
+  const handleReconnectAll = () => {
+    const posMap: Record<string, { x: number; y: number }> = {};
+    nodes.forEach(n => {
+      posMap[n.id] = n.position;
+    });
+    reconnectAllClosest(posMap);
+  };
+
+  const handleResetLayout = () => {
+    // Clear manual positions to recalculate clean balanced layout
+    Object.values(doc.nodes).forEach(n => {
+      if (n.position || n.sourceHandle || n.targetHandle) {
+        updateNode(n.id, { position: undefined, sourceHandle: undefined, targetHandle: undefined });
+      }
+    });
+    setTimeout(() => {
+      fitView({ padding: 0.28, duration: 400 });
+    }, 100);
+  };
+
   return (
     <div className="relative w-full h-full">
+      {/* Floating Action Buttons */}
+      <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
+        <button
+          onClick={handleReconnectAll}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/90 dark:bg-zinc-900/90 hover:bg-white dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-200 text-xs font-semibold border border-slate-200 dark:border-zinc-800 shadow-sm backdrop-blur transition hover:scale-105 active:scale-95"
+          title="Reconnect all nodes using closest 4-sided ports"
+        >
+          <Magnet className="w-3.5 h-3.5 text-amber-500" />
+          <span>Auto-Connect Closest</span>
+        </button>
+
+        <button
+          onClick={handleResetLayout}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/90 dark:bg-zinc-900/90 hover:bg-white dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-200 text-xs font-semibold border border-slate-200 dark:border-zinc-800 shadow-sm backdrop-blur transition hover:scale-105 active:scale-95"
+          title="Re-balance tree layout across all 4 quadrants"
+        >
+          <Sparkles className="w-3.5 h-3.5 text-blue-500" />
+          <span>Clean 4-Sided Layout</span>
+        </button>
+      </div>
+
       <ReactFlow
         nodes={nodes}
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onNodeClick={onNodeClick}
+        onNodeDragStop={onNodeDragStop}
+        onConnect={onConnect}
         onPaneClick={onPaneClick}
         nodeTypes={nodeTypes}
         fitView

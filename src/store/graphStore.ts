@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { MindMapDocument, MindMapNode, NodeStatus } from '../types/mindmap';
+import { findClosestPortPair } from '../utils/layout';
 
 export type ActiveView = 'canvas' | 'kanban' | 'outline' | 'presentation';
 
@@ -21,12 +22,15 @@ interface GraphState {
   setActiveView: (view: ActiveView) => void;
   
   // Node Operations
-  addNode: (parentId: string | null, title?: string) => string;
+  addNode: (parentId: string | null, title?: string, initialDirection?: 'right' | 'left' | 'top' | 'bottom') => string;
   updateNode: (id: string, updates: Partial<MindMapNode>) => void;
   deleteNode: (id: string) => void;
   toggleCompletion: (id: string) => void;
   setNodeStatus: (id: string, status: NodeStatus) => void;
   reparentNode: (id: string, newParentId: string | null) => void;
+  updateNodePosition: (id: string, position: { x: number; y: number }) => void;
+  reconnectToParentClosest: (id: string, childPos?: { x: number; y: number }, parentPos?: { x: number; y: number }) => void;
+  reconnectAllClosest: (positionsMap?: Record<string, { x: number; y: number }>) => void;
 
   // Document Operations
   newDocument: (title?: string) => void;
@@ -170,7 +174,7 @@ export const useGraphStore = create<GraphState>((set, get) => {
     setActiveCenterId: (id) => set({ activeCenterId: id }),
     setActiveView: (view) => set({ activeView: view }),
 
-    addNode: (parentId, title = 'New Thought') => {
+    addNode: (parentId, title = 'New Thought', initialDirection) => {
       const state = get();
       const parent = parentId ? state.document.nodes[parentId] : null;
       const level = parent ? parent.level + 1 : 0;
@@ -179,6 +183,25 @@ export const useGraphStore = create<GraphState>((set, get) => {
 
       const siblings = Object.values(state.document.nodes).filter(n => n.parentId === parentId);
       const order = siblings.length;
+
+      let sourceHandle: string | undefined;
+      let targetHandle: string | undefined;
+
+      if (initialDirection) {
+        if (initialDirection === 'top') {
+          sourceHandle = 'top-source';
+          targetHandle = 'bottom-target';
+        } else if (initialDirection === 'bottom') {
+          sourceHandle = 'bottom-source';
+          targetHandle = 'top-target';
+        } else if (initialDirection === 'left') {
+          sourceHandle = 'left-source';
+          targetHandle = 'right-target';
+        } else {
+          sourceHandle = 'right-source';
+          targetHandle = 'left-target';
+        }
+      }
 
       const newNode: MindMapNode = {
         id: newId,
@@ -190,6 +213,8 @@ export const useGraphStore = create<GraphState>((set, get) => {
         status: 'todo',
         isCompleted: false,
         color: parent?.color || '#3b82f6',
+        sourceHandle,
+        targetHandle,
         createdAt: now,
         updatedAt: now
       };
@@ -321,6 +346,90 @@ export const useGraphStore = create<GraphState>((set, get) => {
       });
 
       get().saveCurrentDocument();
+    },
+
+    updateNodePosition: (id, position) => {
+      const state = get();
+      const node = state.document.nodes[id];
+      if (!node) return;
+
+      const newDoc = {
+        ...state.document,
+        nodes: {
+          ...state.document.nodes,
+          [id]: { ...node, position }
+        }
+      };
+
+      set({ document: newDoc });
+      get().saveCurrentDocument();
+    },
+
+    reconnectToParentClosest: (id, childPos, parentPos) => {
+      const state = get();
+      const node = state.document.nodes[id];
+      if (!node || !node.parentId) return;
+
+      const parent = state.document.nodes[node.parentId];
+      if (!parent) return;
+
+      const cPos = childPos || node.position || { x: 300, y: 0 };
+      const pPos = parentPos || parent.position || { x: 0, y: 0 };
+
+      const bestPair = findClosestPortPair(pPos, cPos);
+
+      const newDoc = {
+        ...state.document,
+        nodes: {
+          ...state.document.nodes,
+          [id]: {
+            ...node,
+            sourceHandle: bestPair.sourceHandle,
+            targetHandle: bestPair.targetHandle
+          }
+        }
+      };
+
+      set({
+        ...recordSnapshot(state),
+        document: newDoc
+      });
+
+      get().saveCurrentDocument();
+    },
+
+    reconnectAllClosest: (positionsMap) => {
+      const state = get();
+      const updatedNodes = { ...state.document.nodes };
+      let changed = false;
+
+      Object.values(updatedNodes).forEach(node => {
+        if (!node.parentId) return;
+        const parent = updatedNodes[node.parentId];
+        if (!parent) return;
+
+        const cPos = positionsMap?.[node.id] || node.position || { x: 300, y: 0 };
+        const pPos = positionsMap?.[parent.id] || parent.position || { x: 0, y: 0 };
+
+        const bestPair = findClosestPortPair(pPos, cPos);
+        if (node.sourceHandle !== bestPair.sourceHandle || node.targetHandle !== bestPair.targetHandle) {
+          updatedNodes[node.id] = {
+            ...node,
+            sourceHandle: bestPair.sourceHandle,
+            targetHandle: bestPair.targetHandle
+          };
+          changed = true;
+        }
+      });
+
+      if (changed) {
+        const newDoc = { ...state.document, nodes: updatedNodes };
+        set({
+          ...recordSnapshot(state),
+          document: newDoc
+        });
+        get().saveCurrentDocument();
+      }
     },
 
     newDocument: (title = 'Untitled Mind Map') => {

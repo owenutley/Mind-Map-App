@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Handle, Position } from '@xyflow/react';
-import { Check, Plus, Focus, Trash2, CheckCircle2 } from 'lucide-react';
+import { Check, Plus, Focus, Trash2, CheckCircle2, Magnet } from 'lucide-react';
 import { MindMapNode } from '../../types/mindmap';
 import { useGraphStore } from '../../store/graphStore';
 
@@ -9,14 +9,14 @@ interface TextTileNodeProps {
   data: {
     node: MindMapNode;
     isRoot: boolean;
-    direction?: 'right' | 'left' | 'root';
+    direction?: 'right' | 'left' | 'top' | 'bottom' | 'root';
     incomingSide?: Position | null;
   };
   selected?: boolean;
 }
 
 export const TextTileNode: React.FC<TextTileNodeProps> = ({ id, data, selected }) => {
-  const { node, isRoot, direction = 'right', incomingSide = null } = data;
+  const { node, isRoot, incomingSide = null } = data;
   const {
     updateNode,
     addNode,
@@ -24,6 +24,7 @@ export const TextTileNode: React.FC<TextTileNodeProps> = ({ id, data, selected }
     toggleCompletion,
     setActiveCenterId,
     activeCenterId,
+    reconnectToParentClosest,
     document: doc
   } = useGraphStore();
 
@@ -66,18 +67,20 @@ export const TextTileNode: React.FC<TextTileNodeProps> = ({ id, data, selected }
   const hasChildren = children.length > 0;
   const isCurrentCenter = activeCenterId === id;
 
-  // Determine which side is incoming (reserved for parent connection)
-  const isLeftIncoming = incomingSide === Position.Left;
-  const isRightIncoming = incomingSide === Position.Right;
-  const isTopIncoming = incomingSide === Position.Top;
-  const isBottomIncoming = incomingSide === Position.Bottom;
+  // Determine incoming target side
+  // Check either node.targetHandle or calculated incomingSide
+  let effectiveIncoming = incomingSide;
+  if (node.targetHandle) {
+    if (node.targetHandle.startsWith('top')) effectiveIncoming = Position.Top;
+    else if (node.targetHandle.startsWith('bottom')) effectiveIncoming = Position.Bottom;
+    else if (node.targetHandle.startsWith('left')) effectiveIncoming = Position.Left;
+    else if (node.targetHandle.startsWith('right')) effectiveIncoming = Position.Right;
+  }
 
-  // Primary forward side for new branch
-  const primaryForwardSide = isRoot
-    ? 'right'
-    : direction === 'left'
-    ? 'left'
-    : 'right';
+  const isLeftIncoming = effectiveIncoming === Position.Left;
+  const isRightIncoming = effectiveIncoming === Position.Right;
+  const isTopIncoming = effectiveIncoming === Position.Top;
+  const isBottomIncoming = effectiveIncoming === Position.Bottom;
 
   return (
     <div
@@ -101,76 +104,132 @@ export const TextTileNode: React.FC<TextTileNodeProps> = ({ id, data, selected }
       {/* 4-SIDED CONNECTION HANDLES WITH PARENT EXCLUSION RULE */}
       {/* ======================================================== */}
 
-      {/* TOP SIDE */}
+      {/* TOP HANDLE */}
       {isTopIncoming ? (
         <Handle
           type="target"
           id="top-target"
           position={Position.Top}
-          className="!w-2.5 !h-2.5 !-top-1.5 !bg-slate-400 dark:!bg-zinc-500 !border-2 !border-white dark:!border-zinc-900"
+          className="!w-2.5 !h-2.5 !-top-1.5 !bg-amber-500 !border-2 !border-white dark:!border-zinc-900"
+          title="Incoming parent connection (Top)"
         />
       ) : (
-        <Handle
-          type="source"
-          id="top-source"
-          position={Position.Top}
-          className="!w-2 !h-2 !-top-1 opacity-0 group-hover:opacity-100 !bg-blue-500 !border !border-white transition-opacity"
-        />
+        <>
+          <Handle
+            type="source"
+            id="top-source"
+            position={Position.Top}
+            className="!w-2.5 !h-2.5 !-top-1.5 !bg-blue-500 !border-2 !border-white dark:!border-zinc-900 opacity-60 group-hover:opacity-100 transition-opacity"
+            title="Branch from Top"
+          />
+          {/* Quick Add Button Top */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              addNode(id, 'New Thought', 'top');
+            }}
+            className="absolute -top-3 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-blue-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:scale-125 z-10 shadow-xs text-[10px]"
+            title="Add Branch (Top)"
+          >
+            +
+          </button>
+        </>
       )}
 
-      {/* BOTTOM SIDE */}
+      {/* BOTTOM HANDLE */}
       {isBottomIncoming ? (
         <Handle
           type="target"
           id="bottom-target"
           position={Position.Bottom}
-          className="!w-2.5 !h-2.5 !-bottom-1.5 !bg-slate-400 dark:!bg-zinc-500 !border-2 !border-white dark:!border-zinc-900"
+          className="!w-2.5 !h-2.5 !-bottom-1.5 !bg-amber-500 !border-2 !border-white dark:!border-zinc-900"
+          title="Incoming parent connection (Bottom)"
         />
       ) : (
-        <Handle
-          type="source"
-          id="bottom-source"
-          position={Position.Bottom}
-          className="!w-2 !h-2 !-bottom-1 opacity-0 group-hover:opacity-100 !bg-blue-500 !border !border-white transition-opacity"
-        />
+        <>
+          <Handle
+            type="source"
+            id="bottom-source"
+            position={Position.Bottom}
+            className="!w-2.5 !h-2.5 !-bottom-1.5 !bg-blue-500 !border-2 !border-white dark:!border-zinc-900 opacity-60 group-hover:opacity-100 transition-opacity"
+            title="Branch from Bottom"
+          />
+          {/* Quick Add Button Bottom */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              addNode(id, 'New Thought', 'bottom');
+            }}
+            className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-blue-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:scale-125 z-10 shadow-xs text-[10px]"
+            title="Add Branch (Bottom)"
+          >
+            +
+          </button>
+        </>
       )}
 
-      {/* LEFT SIDE */}
+      {/* LEFT HANDLE */}
       {isLeftIncoming ? (
         <Handle
           type="target"
           id="left-target"
           position={Position.Left}
-          className="!w-2.5 !h-2.5 !-left-1.5 !bg-slate-400 dark:!bg-zinc-500 !border-2 !border-white dark:!border-zinc-900"
+          className="!w-2.5 !h-2.5 !-left-1.5 !bg-amber-500 !border-2 !border-white dark:!border-zinc-900"
+          title="Incoming parent connection (Left)"
         />
       ) : (
-        <Handle
-          type="source"
-          id="left-source"
-          position={Position.Left}
-          className={`!w-2.5 !h-2.5 !-left-1.5 !border-2 !border-white dark:!border-zinc-900 ${
-            isRoot || direction === 'left' ? '!bg-blue-500' : 'opacity-0 group-hover:opacity-100 !bg-blue-500'
-          }`}
-        />
+        <>
+          <Handle
+            type="source"
+            id="left-source"
+            position={Position.Left}
+            className="!w-2.5 !h-2.5 !-left-1.5 !bg-blue-500 !border-2 !border-white dark:!border-zinc-900 opacity-60 group-hover:opacity-100 transition-opacity"
+            title="Branch from Left"
+          />
+          {/* Quick Add Button Left */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              addNode(id, 'New Thought', 'left');
+            }}
+            className="absolute -left-3 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-blue-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:scale-125 z-10 shadow-xs text-[10px]"
+            title="Add Branch (Left)"
+          >
+            +
+          </button>
+        </>
       )}
 
-      {/* RIGHT SIDE */}
+      {/* RIGHT HANDLE */}
       {isRightIncoming ? (
         <Handle
           type="target"
           id="right-target"
           position={Position.Right}
-          className="!w-2.5 !h-2.5 !-right-1.5 !bg-slate-400 dark:!bg-zinc-500 !border-2 !border-white dark:!border-zinc-900"
+          className="!w-2.5 !h-2.5 !-right-1.5 !bg-amber-500 !border-2 !border-white dark:!border-zinc-900"
+          title="Incoming parent connection (Right)"
         />
       ) : (
-        <Handle
-          type="source"
-          id="right-source"
-          position={Position.Right}
-          className={`!w-2.5 !h-2.5 !-right-1.5 !border-2 !border-white dark:!border-zinc-900 ${
-            isRoot || direction === 'right' ? '!bg-blue-500' : 'opacity-0 group-hover:opacity-100 !bg-blue-500'
-          }`}
-        />
+        <>
+          <Handle
+            type="source"
+            id="right-source"
+            position={Position.Right}
+            className="!w-2.5 !h-2.5 !-right-1.5 !bg-blue-500 !border-2 !border-white dark:!border-zinc-900 opacity-60 group-hover:opacity-100 transition-opacity"
+            title="Branch from Right"
+          />
+          {/* Quick Add Button Right */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              addNode(id, 'New Thought', 'right');
+            }}
+            className="absolute -right-3 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-blue-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:scale-125 z-10 shadow-xs text-[10px]"
+            title="Add Branch (Right)"
+          >
+            +
+          </button>
+        </>
       )}
 
       {/* ======================================================== */}
@@ -200,6 +259,20 @@ export const TextTileNode: React.FC<TextTileNodeProps> = ({ id, data, selected }
 
         {/* Hover Quick Action Buttons */}
         <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          {/* Reconnect to Closest Points on Parent */}
+          {!isRoot && (
+            <button
+              title="Reconnect to Parent (connect closest points)"
+              onClick={(e) => {
+                e.stopPropagation();
+                reconnectToParentClosest(id);
+              }}
+              className="p-1 rounded text-slate-400 hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-zinc-800 transition"
+            >
+              <Magnet className="w-3.5 h-3.5" />
+            </button>
+          )}
+
           <button
             title="Focus / Hoist as Center"
             onClick={(e) => {
@@ -214,7 +287,7 @@ export const TextTileNode: React.FC<TextTileNodeProps> = ({ id, data, selected }
           </button>
 
           <button
-            title={`Branch Child Thought (${primaryForwardSide})`}
+            title="Branch Child Thought"
             onClick={(e) => {
               e.stopPropagation();
               addNode(id, 'New Idea');
