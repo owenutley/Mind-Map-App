@@ -78,7 +78,7 @@ const createDefaultDocument = (title = 'Main Vision'): MindMapDocument => {
       order: 0,
       status: 'in_progress',
       isCompleted: false,
-      color: '#ffffff',
+      color: '#64748b',
       createdAt: now,
       updatedAt: now
     },

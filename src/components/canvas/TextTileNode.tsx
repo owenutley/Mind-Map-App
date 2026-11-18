@@ -103,18 +103,16 @@ export const TextTileNode: React.FC<TextTileNodeProps> = ({ id, data, selected }
         selected
           ? 'ring-2 ring-blue-500 shadow-md ring-offset-2 dark:ring-offset-zinc-950'
           : isRoot
-          ? 'ring-2 ring-slate-400/80 dark:ring-white/80 border-slate-400 dark:border-white shadow-md dark:shadow-[0_0_20px_rgba(255,255,255,0.22)]'
+          ? 'shadow-md dark:shadow-[0_0_20px_rgba(255,255,255,0.12)] hover:border-slate-300 dark:hover:border-zinc-700'
           : 'hover:border-slate-300 dark:hover:border-zinc-700'
       } ${
-        isRoot
-          ? 'bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100'
-          : node.isCompleted
+        node.isCompleted
           ? 'bg-slate-50/75 dark:bg-zinc-900/40 border-slate-200 dark:border-zinc-800/80 opacity-70'
-          : 'bg-white dark:bg-zinc-900 border-slate-200/90 dark:border-zinc-800'
+          : 'bg-white dark:bg-zinc-900 border-slate-200/90 dark:border-zinc-800 text-slate-800 dark:text-zinc-100'
       }`}
       style={{
-        borderLeftWidth: isRoot ? '5px' : '4px',
-        borderLeftColor: isRoot ? '#ffffff' : (node.color || '#3b82f6')
+        borderLeftWidth: '4px',
+        borderLeftColor: isRoot ? '#64748b' : (node.color || '#3b82f6')
       }}
     >
       {/* ======================================================== */}
@@ -294,7 +292,7 @@ export const TextTileNode: React.FC<TextTileNodeProps> = ({ id, data, selected }
           <span
             className={`text-[10px] font-semibold tracking-wider uppercase px-1.5 py-0.5 rounded ${
               isRoot
-                ? 'bg-slate-100 text-slate-800 dark:bg-white/15 dark:text-white border border-slate-300 dark:border-white/50 font-bold'
+                ? 'bg-slate-100 text-slate-800 dark:bg-zinc-800 dark:text-zinc-200 border border-slate-200 dark:border-zinc-700 font-bold'
                 : 'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400'
             }`}
           >
