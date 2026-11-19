@@ -5,11 +5,12 @@ import { MindMapCanvas } from './components/canvas/MindMapCanvas';
 import { KanbanBoard } from './components/kanban/KanbanBoard';
 import { OutlineView } from './components/outline/OutlineView';
 import { PresentationView } from './components/presentation/PresentationView';
+import { NodeDetailsDrawer } from './components/inspector/NodeDetailsDrawer';
 import { useGraphStore } from './store/graphStore';
 
 export const App: React.FC = () => {
   const [isVaultOpen, setIsVaultOpen] = useState(false);
-  const { activeView, undo, redo, saveCurrentDocument } = useGraphStore();
+  const { activeView, undo, redo, saveCurrentDocument, isInspectorOpen, setInspectorOpen } = useGraphStore();
 
   // Global keyboard shortcuts (Ctrl+Z, Ctrl+Y, Ctrl+S)
   useEffect(() => {
@@ -30,12 +31,15 @@ export const App: React.FC = () => {
       } else if (mod && e.key.toLowerCase() === 's') {
         e.preventDefault();
         saveCurrentDocument();
+      } else if (mod && e.key.toLowerCase() === 'i') {
+        e.preventDefault();
+        setInspectorOpen(!isInspectorOpen);
       }
     };
 
     window.addEventListener('keydown', handleGlobalShortcuts);
     return () => window.removeEventListener('keydown', handleGlobalShortcuts);
-  }, [undo, redo, saveCurrentDocument]);
+  }, [undo, redo, saveCurrentDocument, isInspectorOpen, setInspectorOpen]);
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-slate-50 dark:bg-zinc-950 font-sans">
@@ -47,6 +51,8 @@ export const App: React.FC = () => {
         {activeView === 'outline' && <OutlineView />}
         {activeView === 'presentation' && <PresentationView />}
       </main>
+
+      <NodeDetailsDrawer />
 
       <VaultSidebar
         isOpen={isVaultOpen}

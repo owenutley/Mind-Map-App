@@ -16,7 +16,8 @@ import {
   Eye,
   EyeOff,
   FolderMinus,
-  FolderPlus
+  FolderPlus,
+  PanelRight
 } from 'lucide-react';
 import { useGraphStore, ActiveView } from '../../store/graphStore';
 import { useThemeStore } from '../../store/themeStore';
@@ -41,7 +42,9 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onOpenVault }) => {
     hideCompleted,
     toggleHideCompleted,
     collapseAllToL2,
-    expandAll
+    expandAll,
+    isInspectorOpen,
+    setInspectorOpen
   } = useGraphStore();
 
   const { effectiveTheme, toggleTheme } = useThemeStore();
@@ -259,6 +262,21 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onOpenVault }) => {
           title={`Switch to ${effectiveTheme === 'dark' ? 'Light' : 'Dark'} mode`}
         >
           {effectiveTheme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-700" />}
+        </button>
+
+        <div className="h-4 w-px bg-slate-200 dark:bg-zinc-800" />
+
+        {/* Details & Notes Inspector Toggle */}
+        <button
+          onClick={() => setInspectorOpen(!isInspectorOpen)}
+          className={`p-1.5 rounded-lg border transition ${
+            isInspectorOpen
+              ? 'bg-blue-100 dark:bg-blue-950/60 border-blue-300 dark:border-blue-800 text-blue-700 dark:text-blue-300'
+              : 'border-slate-200 dark:border-zinc-800 text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800'
+          }`}
+          title="Toggle Details & Notes Inspector (Ctrl+I)"
+        >
+          <PanelRight className="w-4 h-4" />
         </button>
       </div>
     </header>

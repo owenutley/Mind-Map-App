@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Handle, Position } from '@xyflow/react';
-import { Check, Plus, Focus, Trash2, CheckCircle2, Magnet, Palette } from 'lucide-react';
+import { Check, Plus, Focus, Trash2, CheckCircle2, Magnet, Palette, FileText } from 'lucide-react';
 import { MindMapNode } from '../../types/mindmap';
 import { useGraphStore, BRANCH_PALETTE } from '../../store/graphStore';
 
@@ -29,6 +29,7 @@ export const TextTileNode: React.FC<TextTileNodeProps> = ({ id, data, selected }
     setActiveCenterId,
     activeCenterId,
     reconnectToParentClosest,
+    setSelectedNodeId,
     document: doc
   } = useGraphStore();
 
@@ -322,6 +323,20 @@ export const TextTileNode: React.FC<TextTileNodeProps> = ({ id, data, selected }
             </span>
           )}
 
+          {/* Notes indicator badge if notes exist */}
+          {Boolean(node.notes?.trim()) && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedNodeId(id, true);
+              }}
+              className="p-0.5 rounded text-blue-500 hover:text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-zinc-800 transition"
+              title="Has notes & description (click to open inspector)"
+            >
+              <FileText className="w-3 h-3" />
+            </button>
+          )}
+
           {/* Progressive Disclosure: Fold / Unfold Badge */}
           {directChildrenCount > 0 && (
             <button
@@ -343,6 +358,18 @@ export const TextTileNode: React.FC<TextTileNodeProps> = ({ id, data, selected }
 
         {/* Hover Quick Action Buttons */}
         <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          {/* Inspect Details & Markdown Notes */}
+          <button
+            title="Inspect Details & Notes"
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedNodeId(id, true);
+            }}
+            className="p-1 rounded text-slate-400 hover:text-blue-500 hover:bg-slate-100 dark:hover:bg-zinc-800 transition"
+          >
+            <FileText className="w-3.5 h-3.5" />
+          </button>
+
           {/* Color Palette Picker Button */}
           {!isRoot && (
             <button
@@ -457,10 +484,22 @@ export const TextTileNode: React.FC<TextTileNodeProps> = ({ id, data, selected }
       </div>
 
       {/* Notes preview if available */}
-      {node.notes && (
-        <p className={`mt-1.5 text-[11px] line-clamp-1 italic ${isRoot ? 'text-slate-500 dark:text-zinc-400' : 'text-slate-400 dark:text-zinc-500'}`}>
-          {node.notes}
-        </p>
+      {Boolean(node.notes?.trim()) && (
+        <div
+          onClick={(e) => {
+            e.stopPropagation();
+            setSelectedNodeId(id, true);
+          }}
+          className={`mt-2 pt-1.5 border-t border-slate-100 dark:border-zinc-800/80 flex items-center gap-1.5 text-[11px] cursor-pointer hover:text-blue-500 dark:hover:text-blue-400 transition group/note ${
+            isRoot ? 'text-slate-500 dark:text-zinc-400' : 'text-slate-400 dark:text-zinc-500'
+          }`}
+          title="Click to view/edit description in Inspector"
+        >
+          <FileText className="w-3 h-3 shrink-0 opacity-60 group-hover/note:opacity-100 group-hover/note:text-blue-500" />
+          <span className="line-clamp-1 italic truncate">
+            {node.notes}
+          </span>
+        </div>
       )}
     </div>
   );

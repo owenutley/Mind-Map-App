@@ -18,6 +18,7 @@ export const BRANCH_PALETTE = [
 interface GraphState {
   document: MindMapDocument;
   selectedNodeId: string | null;
+  isInspectorOpen: boolean;
   activeCenterId: string;
   activeView: ActiveView;
   hideCompleted: boolean;
@@ -29,7 +30,8 @@ interface GraphState {
   future: MindMapDocument[];
 
   // Actions
-  setSelectedNodeId: (id: string | null) => void;
+  setSelectedNodeId: (id: string | null, openInspector?: boolean) => void;
+  setInspectorOpen: (open: boolean) => void;
   setActiveCenterId: (id: string) => void;
   setActiveView: (view: ActiveView) => void;
   toggleHideCompleted: () => void;
@@ -208,7 +210,8 @@ export const useGraphStore = create<GraphState>((set, get) => {
 
   return {
     document: initialDoc,
-    selectedNodeId: initialDoc.rootNodeId,
+    selectedNodeId: null,
+    isInspectorOpen: false,
     activeCenterId: initialDoc.rootNodeId,
     activeView: 'canvas',
     hideCompleted: false,
@@ -217,7 +220,11 @@ export const useGraphStore = create<GraphState>((set, get) => {
     past: [],
     future: [],
 
-    setSelectedNodeId: (id) => set({ selectedNodeId: id }),
+    setSelectedNodeId: (id, openInspector = true) => set((state) => ({
+      selectedNodeId: id,
+      isInspectorOpen: id !== null ? (openInspector ? true : state.isInspectorOpen) : false
+    })),
+    setInspectorOpen: (open) => set({ isInspectorOpen: open }),
     setActiveCenterId: (id) => set({ activeCenterId: id }),
     setActiveView: (view) => set({ activeView: view }),
     toggleHideCompleted: () => set((state) => ({ hideCompleted: !state.hideCompleted })),

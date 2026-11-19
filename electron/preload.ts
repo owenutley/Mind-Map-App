@@ -16,6 +16,7 @@ export interface VaultAPI {
   getVaultPath: () => Promise<string>;
   exportMapFile: (doc: any, format: string) => Promise<boolean>;
   importMapFile: () => Promise<any | null>;
+  openExternal: (url: string) => Promise<boolean>;
 }
 
 const api: VaultAPI = {
@@ -25,7 +26,8 @@ const api: VaultAPI = {
   deleteMap: (id: string) => ipcRenderer.invoke('vault:delete-map', id),
   getVaultPath: () => ipcRenderer.invoke('vault:get-path'),
   exportMapFile: (doc: any, format: string) => ipcRenderer.invoke('vault:export-file', doc, format),
-  importMapFile: () => ipcRenderer.invoke('vault:import-file')
+  importMapFile: () => ipcRenderer.invoke('vault:import-file'),
+  openExternal: (url: string) => ipcRenderer.invoke('shell:open-external', url)
 };
 
 contextBridge.exposeInMainWorld('vaultAPI', api);

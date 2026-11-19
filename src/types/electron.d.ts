@@ -8,6 +8,7 @@ export interface VaultAPI {
   getVaultPath: () => Promise<string>;
   exportMapFile: (doc: any, format: string) => Promise<boolean>;
   importMapFile: () => Promise<any | null>;
+  openExternal: (url: string) => Promise<boolean>;
 }
 
 declare global {

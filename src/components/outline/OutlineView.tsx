@@ -5,7 +5,8 @@ import {
   Check,
   Plus,
   Trash2,
-  ListTree
+  ListTree,
+  FileText
 } from 'lucide-react';
 import { useGraphStore } from '../../store/graphStore';
 import { MindMapNode } from '../../types/mindmap';
@@ -120,6 +121,14 @@ const OutlineItem: React.FC<OutlineItemProps> = ({ node, depth }) => {
 
         {/* Hover Quick Actions */}
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            title="Inspect Details & Notes"
+            onClick={() => setSelectedNodeId(node.id, true)}
+            className="p-1 rounded text-slate-400 hover:text-blue-500 hover:bg-white dark:hover:bg-zinc-800"
+          >
+            <FileText className="w-3.5 h-3.5" />
+          </button>
+
           <button
             title="Add Child Sub-branch"
             onClick={() => {

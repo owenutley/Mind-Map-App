@@ -107,7 +107,11 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({ node }) => {
           </p>
 
           {node.notes && (
-            <p className="mt-1 text-xs text-slate-400 dark:text-zinc-500 line-clamp-2">
+            <p
+              onClick={() => setSelectedNodeId(node.id, true)}
+              className="mt-1 text-xs text-slate-400 dark:text-zinc-500 line-clamp-2 cursor-pointer hover:text-blue-500 dark:hover:text-blue-400 transition"
+              title="Click to view/edit notes in inspector"
+            >
               {node.notes}
             </p>
           )}

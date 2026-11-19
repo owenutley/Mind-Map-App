@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import * as os from 'os';
@@ -52,12 +52,36 @@ const createWindow = (): void => {
     });
   }
 
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith('http:') || url.startsWith('https:') || url.startsWith('mailto:')) {
+      shell.openExternal(url);
+    }
+    return { action: 'deny' };
+  });
+
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (url.startsWith('http:') || url.startsWith('https:')) {
+      if (url !== 'http://localhost:5173/' && !url.includes('localhost:5173')) {
+        event.preventDefault();
+        shell.openExternal(url);
+      }
+    }
+  });
+
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
 };
 
 // Vault IPC Handlers
+ipcMain.handle('shell:open-external', async (_event, url: string) => {
+  if (url && (url.startsWith('http:') || url.startsWith('https:') || url.startsWith('mailto:'))) {
+    await shell.openExternal(url);
+    return true;
+  }
+  return false;
+});
+
 ipcMain.handle('vault:get-path', async () => {
   return await ensureVaultDir();
 });
