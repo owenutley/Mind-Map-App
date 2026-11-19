@@ -1,7 +1,7 @@
 import { app, BrowserWindow, ipcMain, dialog } from 'electron';
-import * as path from 'node:path';
-import * as fs from 'node:fs/promises';
-import * as os from 'node:os';
+import * as path from 'path';
+import * as fs from 'fs/promises';
+import * as os from 'os';
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -28,6 +28,7 @@ const createWindow = (): void => {
     minHeight: 600,
     backgroundColor: '#09090b',
     title: 'MindMap Studio',
+    show: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -36,16 +37,19 @@ const createWindow = (): void => {
     }
   });
 
-  // If in development mode
-  const devUrl = 'http://localhost:5173';
-  if (process.env.VITE_DEV_SERVER_URL || process.env.NODE_ENV === 'development' || !app.isPackaged) {
-    mainWindow.loadURL(devUrl).catch(() => {
-      // In case vite server isn't up yet, retry shortly
-      setTimeout(() => mainWindow?.loadURL(devUrl), 1000);
+  const indexPath = path.join(__dirname, '../dist/index.html');
+
+  if (app.isPackaged) {
+    mainWindow.loadFile(indexPath).catch((err: any) => {
+      console.error('Failed to load file:', err);
+      dialog.showErrorBox('Error Loading App', `Failed to load ${indexPath}: ${err.message}`);
     });
-    // mainWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+    // In development mode, try Vite dev server first, fallback to dist/index.html
+    const devUrl = 'http://localhost:5173';
+    mainWindow.loadURL(devUrl).catch(() => {
+      mainWindow?.loadFile(indexPath);
+    });
   }
 
   mainWindow.on('closed', () => {
@@ -96,14 +100,13 @@ ipcMain.handle('vault:read-map', async (_, id: string) => {
   try {
     const content = await fs.readFile(filePath, 'utf-8');
     return JSON.parse(content);
-  } catch (err) {
-    // try fallback with .json
+  } catch {
     try {
       const fallbackPath = path.join(vaultDir, `${id}.json`);
       const content = await fs.readFile(fallbackPath, 'utf-8');
       return JSON.parse(content);
     } catch {
-      console.error(`Failed to read map ${id}:`, err);
+      console.error(`Failed to read map ${id}`);
       return null;
     }
   }
@@ -157,7 +160,6 @@ ipcMain.handle('vault:export-file', async (_, doc: any, format: string) => {
   try {
     let payload = '';
     if (format === 'markdown') {
-      // convert to simple hierarchical markdown outline
       payload = `# ${doc.title || 'Untitled'}\n\n`;
       const nodes = doc.nodes || {};
       const roots = Object.values(nodes).filter((n: any) => !n.parentId);
