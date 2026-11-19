@@ -27,7 +27,9 @@ const OutlineItem: React.FC<OutlineItemProps> = ({ node, depth }) => {
     hideCompleted
   } = useGraphStore();
 
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(
+    node.isCollapsed !== undefined ? !node.isCollapsed : node.level < 2
+  );
   const [isEditing, setIsEditing] = useState(false);
   const [text, setText] = useState(node.title);
 

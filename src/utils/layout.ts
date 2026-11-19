@@ -78,7 +78,9 @@ export function computeMindMapLayout(
       node: rootNode,
       isRoot: true,
       direction: 'root',
-      incomingSide: null
+      incomingSide: null,
+      isCollapsed: false,
+      directChildrenCount: 0
     }
   });
 
@@ -86,6 +88,9 @@ export function computeMindMapLayout(
   const directChildren = Object.values(doc.nodes)
     .filter(n => n.parentId === rootId && (!hideCompleted || !n.isCompleted))
     .sort((a, b) => a.order - b.order);
+
+  // Update root direct children count
+  rfNodes[0].data.directChildrenCount = directChildren.length;
 
   if (directChildren.length === 0) {
     return { nodes: rfNodes, edges: rfEdges };
@@ -113,10 +118,18 @@ export function computeMindMapLayout(
 
   const buildSubtree = (nodeId: string, direction: BranchDirection): HierarchyDatum => {
     const node = doc.nodes[nodeId];
-    const children = Object.values(doc.nodes)
-      .filter(n => n.parentId === nodeId && (!hideCompleted || !n.isCompleted))
-      .sort((a, b) => a.order - b.order)
-      .map(c => buildSubtree(c.id, direction));
+
+    // Default L3+ Natural Folding:
+    // If node.isCollapsed is explicitly defined, use that.
+    // If undefined, nodes at level >= 2 default to isCollapsed = true (so L3+ children are hidden by default)
+    const isNodeCollapsed = node.isCollapsed !== undefined ? node.isCollapsed : (node.level >= 2);
+
+    const children = (!isNodeCollapsed)
+      ? Object.values(doc.nodes)
+          .filter(n => n.parentId === nodeId && (!hideCompleted || !n.isCompleted))
+          .sort((a, b) => a.order - b.order)
+          .map(c => buildSubtree(c.id, direction))
+      : [];
 
     return {
       id: nodeId,
@@ -184,6 +197,12 @@ export function computeMindMapLayout(
       if (direction === 'top') incomingSide = Position.Bottom;
       if (direction === 'bottom') incomingSide = Position.Top;
 
+      const directChildrenCount = Object.values(doc.nodes).filter(
+        n => n.parentId === nodeData.id && (!hideCompleted || !n.isCompleted)
+      ).length;
+
+      const isNodeCollapsed = nodeData.isCollapsed !== undefined ? nodeData.isCollapsed : (nodeData.level >= 2);
+
       rfNodes.push({
         id: nodeData.id,
         type: 'textTile',
@@ -192,7 +211,9 @@ export function computeMindMapLayout(
           node: nodeData,
           isRoot: false,
           direction,
-          incomingSide
+          incomingSide,
+          isCollapsed: isNodeCollapsed,
+          directChildrenCount
         }
       });
 

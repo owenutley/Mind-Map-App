@@ -14,7 +14,9 @@ import {
   Check,
   Loader2,
   Eye,
-  EyeOff
+  EyeOff,
+  FolderMinus,
+  FolderPlus
 } from 'lucide-react';
 import { useGraphStore, ActiveView } from '../../store/graphStore';
 import { useThemeStore } from '../../store/themeStore';
@@ -37,7 +39,9 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onOpenVault }) => {
     canRedo,
     loadDocument,
     hideCompleted,
-    toggleHideCompleted
+    toggleHideCompleted,
+    collapseAllToL2,
+    expandAll
   } = useGraphStore();
 
   const { effectiveTheme, toggleTheme } = useThemeStore();
@@ -207,6 +211,24 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({ onOpenVault }) => {
             {hideCompleted ? 'Done Hidden' : 'Hide Done'}
           </span>
         </button>
+
+        {/* Global Depth / Folding Controls */}
+        <div className="flex items-center bg-slate-100 dark:bg-zinc-800 p-0.5 rounded-lg border border-slate-200 dark:border-zinc-800">
+          <button
+            onClick={collapseAllToL2}
+            className="p-1 rounded text-slate-500 hover:text-slate-800 dark:hover:text-zinc-200 transition"
+            title="Collapse to Level 2 (Default Clean View)"
+          >
+            <FolderMinus className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={expandAll}
+            className="p-1 rounded text-slate-500 hover:text-slate-800 dark:hover:text-zinc-200 transition"
+            title="Expand All Branches"
+          >
+            <FolderPlus className="w-3.5 h-3.5" />
+          </button>
+        </div>
 
         <div className="h-4 w-px bg-slate-200 dark:bg-zinc-800" />
 

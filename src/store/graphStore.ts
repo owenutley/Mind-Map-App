@@ -40,6 +40,9 @@ interface GraphState {
   updateNodeColor: (id: string, newColor: string, updateChildren?: boolean) => void;
   deleteNode: (id: string) => void;
   toggleCompletion: (id: string) => void;
+  toggleCollapse: (id: string) => void;
+  collapseAllToL2: () => void;
+  expandAll: () => void;
   setNodeStatus: (id: string, status: NodeStatus) => void;
   reparentNode: (id: string, newParentId: string | null) => void;
   updateNodePosition: (id: string, position: { x: number; y: number }) => void;
@@ -67,6 +70,8 @@ const createDefaultDocument = (title = 'Main Vision'): MindMapDocument => {
   const sub2Id = generateId();
   const sub3Id = generateId();
   const sub1ChildId = generateId();
+  const l3ChildA = generateId();
+  const l3ChildB = generateId();
 
   const now = new Date().toISOString();
 
@@ -131,6 +136,33 @@ const createDefaultDocument = (title = 'Main Vision'): MindMapDocument => {
       level: 2,
       order: 0,
       status: 'in_progress',
+      isCompleted: false,
+      isCollapsed: true, // Naturally folded L3+ by default
+      color: '#10b981',
+      createdAt: now,
+      updatedAt: now
+    },
+    [l3ChildA]: {
+      id: l3ChildA,
+      parentId: sub1ChildId,
+      title: 'Architecture & API Specs',
+      notes: 'Detailed endpoints, schema definitions, and contract tests.',
+      level: 3,
+      order: 0,
+      status: 'todo',
+      isCompleted: false,
+      color: '#10b981',
+      createdAt: now,
+      updatedAt: now
+    },
+    [l3ChildB]: {
+      id: l3ChildB,
+      parentId: sub1ChildId,
+      title: 'Telemetry & Observability',
+      notes: 'Metrics pipeline, alerting rules, and structured tracing.',
+      level: 3,
+      order: 1,
+      status: 'todo',
       isCompleted: false,
       color: '#10b981',
       createdAt: now,
@@ -229,6 +261,11 @@ export const useGraphStore = create<GraphState>((set, get) => {
         nodeColor = parent.color;
       }
 
+      // If parent was collapsed, auto-uncollapse so user sees the new thought they just created
+      const parentNode = parent && parent.isCollapsed
+        ? { [parent.id]: { ...parent, isCollapsed: false } }
+        : {};
+
       const newNode: MindMapNode = {
         id: newId,
         parentId,
@@ -238,6 +275,7 @@ export const useGraphStore = create<GraphState>((set, get) => {
         order,
         status: 'todo',
         isCompleted: false,
+        isCollapsed: false,
         color: nodeColor,
         sourceHandle,
         targetHandle,
@@ -249,6 +287,7 @@ export const useGraphStore = create<GraphState>((set, get) => {
         ...state.document,
         nodes: {
           ...state.document.nodes,
+          ...parentNode,
           [newId]: newNode
         }
       };
@@ -436,6 +475,60 @@ export const useGraphStore = create<GraphState>((set, get) => {
         document: newDoc
       });
 
+      get().saveCurrentDocument();
+    },
+
+    toggleCollapse: (id) => {
+      const state = get();
+      const node = state.document.nodes[id];
+      if (!node) return;
+
+      const isCollapsed = !node.isCollapsed;
+      const updatedNodes = {
+        ...state.document.nodes,
+        [id]: { ...node, isCollapsed }
+      };
+
+      set({
+        ...recordSnapshot(state),
+        document: {
+          ...state.document,
+          nodes: updatedNodes
+        }
+      });
+      get().saveCurrentDocument();
+    },
+
+    collapseAllToL2: () => {
+      const state = get();
+      const updatedNodes = { ...state.document.nodes };
+      Object.values(updatedNodes).forEach(node => {
+        const hasChildren = Object.values(updatedNodes).some(n => n.parentId === node.id);
+        if (hasChildren) {
+          updatedNodes[node.id] = { ...node, isCollapsed: node.level >= 2 };
+        }
+      });
+
+      set({
+        ...recordSnapshot(state),
+        document: { ...state.document, nodes: updatedNodes }
+      });
+      get().saveCurrentDocument();
+    },
+
+    expandAll: () => {
+      const state = get();
+      const updatedNodes = { ...state.document.nodes };
+      Object.values(updatedNodes).forEach(node => {
+        if (node.isCollapsed) {
+          updatedNodes[node.id] = { ...node, isCollapsed: false };
+        }
+      });
+
+      set({
+        ...recordSnapshot(state),
+        document: { ...state.document, nodes: updatedNodes }
+      });
       get().saveCurrentDocument();
     },
 

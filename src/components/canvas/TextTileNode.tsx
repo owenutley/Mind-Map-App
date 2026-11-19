@@ -11,18 +11,21 @@ interface TextTileNodeProps {
     isRoot: boolean;
     direction?: 'right' | 'left' | 'top' | 'bottom' | 'root';
     incomingSide?: Position | null;
+    isCollapsed?: boolean;
+    directChildrenCount?: number;
   };
   selected?: boolean;
 }
 
 export const TextTileNode: React.FC<TextTileNodeProps> = ({ id, data, selected }) => {
-  const { node, isRoot, incomingSide = null } = data;
+  const { node, isRoot, incomingSide = null, isCollapsed = false, directChildrenCount = 0 } = data;
   const {
     updateNode,
     updateNodeColor,
     addNode,
     deleteNode,
     toggleCompletion,
+    toggleCollapse,
     setActiveCenterId,
     activeCenterId,
     reconnectToParentClosest,
@@ -317,6 +320,24 @@ export const TextTileNode: React.FC<TextTileNodeProps> = ({ id, data, selected }
               <CheckCircle2 className="w-2.5 h-2.5 text-emerald-500" />
               {completedChildren}/{children.length}
             </span>
+          )}
+
+          {/* Progressive Disclosure: Fold / Unfold Badge */}
+          {directChildrenCount > 0 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleCollapse(id);
+              }}
+              className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold transition flex items-center gap-0.5 cursor-pointer shadow-2xs ${
+                isCollapsed
+                  ? 'bg-blue-600 hover:bg-blue-500 text-white animate-pulse'
+                  : 'bg-slate-200 dark:bg-zinc-800 hover:bg-slate-300 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-300'
+              }`}
+              title={isCollapsed ? `Expand ${directChildrenCount} hidden sub-thoughts (L${node.level + 1}+)` : 'Collapse sub-thoughts'}
+            >
+              {isCollapsed ? `+${directChildrenCount}` : '−'}
+            </button>
           )}
         </div>
 
