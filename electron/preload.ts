@@ -14,6 +14,8 @@ export interface VaultAPI {
   saveMap: (doc: any) => Promise<{ success: boolean; path: string }>;
   deleteMap: (id: string) => Promise<boolean>;
   getVaultPath: () => Promise<string>;
+  getVaultName: () => Promise<string>;
+  renameVault: (newName: string) => Promise<{ success: boolean; vaultName?: string; vaultPath?: string; error?: string }>;
   exportMapFile: (doc: any, format: string) => Promise<boolean>;
   importMapFile: () => Promise<any | null>;
   openExternal: (url: string) => Promise<boolean>;
@@ -25,6 +27,8 @@ const api: VaultAPI = {
   saveMap: (doc: any) => ipcRenderer.invoke('vault:save-map', doc),
   deleteMap: (id: string) => ipcRenderer.invoke('vault:delete-map', id),
   getVaultPath: () => ipcRenderer.invoke('vault:get-path'),
+  getVaultName: () => ipcRenderer.invoke('vault:get-vault-name'),
+  renameVault: (newName: string) => ipcRenderer.invoke('vault:rename-vault', newName),
   exportMapFile: (doc: any, format: string) => ipcRenderer.invoke('vault:export-file', doc, format),
   importMapFile: () => ipcRenderer.invoke('vault:import-file'),
   openExternal: (url: string) => ipcRenderer.invoke('shell:open-external', url)

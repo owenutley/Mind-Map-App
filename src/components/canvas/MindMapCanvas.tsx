@@ -101,7 +101,7 @@ const InnerCanvas: React.FC = () => {
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
 
       if (!selectedNodeId) return;
 
@@ -134,7 +134,7 @@ const InnerCanvas: React.FC = () => {
 
   const onNodeClick: NodeMouseHandler = useCallback(
     (_, node) => {
-      setSelectedNodeId(node.id);
+      setSelectedNodeId(node.id, true);
     },
     [setSelectedNodeId]
   );
@@ -169,7 +169,7 @@ const InnerCanvas: React.FC = () => {
       <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
         <button
           onClick={handleReconnectAll}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/90 dark:bg-zinc-900/90 hover:bg-white dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-200 text-xs font-semibold border border-slate-200 dark:border-zinc-800 shadow-sm backdrop-blur transition hover:scale-105 active:scale-95"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/90 dark:bg-[#0f172a]/90 hover:bg-white dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold border border-slate-200 dark:border-slate-800 shadow-sm backdrop-blur transition hover:scale-105 active:scale-95"
           title="Reconnect all nodes using closest 4-sided ports"
         >
           <Magnet className="w-3.5 h-3.5 text-amber-500" />
@@ -178,7 +178,7 @@ const InnerCanvas: React.FC = () => {
 
         <button
           onClick={handleResetLayout}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/90 dark:bg-zinc-900/90 hover:bg-white dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-200 text-xs font-semibold border border-slate-200 dark:border-zinc-800 shadow-sm backdrop-blur transition hover:scale-105 active:scale-95"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/90 dark:bg-[#0f172a]/90 hover:bg-white dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold border border-slate-200 dark:border-slate-800 shadow-sm backdrop-blur transition hover:scale-105 active:scale-95"
           title="Re-balance tree layout across all 4 quadrants"
         >
           <Sparkles className="w-3.5 h-3.5 text-blue-500" />
@@ -209,17 +209,17 @@ const InnerCanvas: React.FC = () => {
           variant={BackgroundVariant.Dots}
           gap={26}
           size={1.5}
-          color={effectiveTheme === 'dark' ? '#27272a' : '#cbd5e1'}
+          color={effectiveTheme === 'dark' ? '#1e293b' : '#cbd5e1'}
         />
         <Controls
           showInteractive={false}
-          className="!bg-white dark:!bg-zinc-900 !border-slate-200 dark:!border-zinc-800 !rounded-xl !shadow-sm overflow-hidden"
+          className="!bg-white dark:!bg-[#0f172a] !border-slate-200 dark:!border-slate-800 !rounded-xl !shadow-sm overflow-hidden"
         />
         <MiniMap
           nodeStrokeWidth={2}
           zoomable
           pannable
-          className="!bg-white/80 dark:!bg-zinc-900/80 !border-slate-200 dark:!border-zinc-800 !rounded-xl overflow-hidden !shadow-sm"
+          className="!bg-white/80 dark:!bg-[#0f172a]/90 !border-slate-200 dark:!border-slate-800 !rounded-xl overflow-hidden !shadow-sm"
           nodeColor={(n) => {
             const dataNode = doc.nodes[n.id];
             return dataNode?.color || '#3b82f6';
@@ -228,11 +228,11 @@ const InnerCanvas: React.FC = () => {
       </ReactFlow>
 
       {/* Floating Canvas Quick Tips */}
-      <div className="absolute bottom-4 left-4 z-10 flex items-center gap-3 bg-white/90 dark:bg-zinc-900/90 backdrop-blur px-3 py-1.5 rounded-lg border border-slate-200/80 dark:border-zinc-800 text-[11px] text-slate-500 dark:text-zinc-400 shadow-sm pointer-events-none">
-        <span><kbd className="px-1 py-0.5 bg-slate-100 dark:bg-zinc-800 rounded font-semibold text-slate-700 dark:text-zinc-200">Tab</kbd> Child</span>
-        <span><kbd className="px-1 py-0.5 bg-slate-100 dark:bg-zinc-800 rounded font-semibold text-slate-700 dark:text-zinc-200">Enter</kbd> Sibling</span>
-        <span><kbd className="px-1 py-0.5 bg-slate-100 dark:bg-zinc-800 rounded font-semibold text-slate-700 dark:text-zinc-200">Space</kbd> Check</span>
-        <span><kbd className="px-1 py-0.5 bg-slate-100 dark:bg-zinc-800 rounded font-semibold text-slate-700 dark:text-zinc-200">Del</kbd> Remove</span>
+      <div className="absolute bottom-4 left-4 z-10 flex items-center gap-3 bg-white/90 dark:bg-[#0f172a]/90 backdrop-blur px-3 py-1.5 rounded-lg border border-slate-200/80 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 shadow-sm pointer-events-none">
+        <span><kbd className="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 rounded font-semibold text-slate-700 dark:text-slate-200">Tab</kbd> Child</span>
+        <span><kbd className="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 rounded font-semibold text-slate-700 dark:text-slate-200">Enter</kbd> Sibling</span>
+        <span><kbd className="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 rounded font-semibold text-slate-700 dark:text-slate-200">Space</kbd> Check</span>
+        <span><kbd className="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 rounded font-semibold text-slate-700 dark:text-slate-200">Del</kbd> Remove</span>
       </div>
     </div>
   );

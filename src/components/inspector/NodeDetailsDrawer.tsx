@@ -23,11 +23,12 @@ import {
   Code,
   Link2,
   FileText,
-  CornerDownRight
+  CornerDownRight,
+  Shapes
 } from 'lucide-react';
 import { marked } from 'marked';
 import { useGraphStore, BRANCH_PALETTE } from '../../store/graphStore';
-import { NodeStatus } from '../../types/mindmap';
+import { NodeStatus, NodeShape } from '../../types/mindmap';
 import { getAncestorBreadcrumbs } from '../../utils/layout';
 
 // Helper to open links safely in external browser
@@ -49,6 +50,7 @@ export const NodeDetailsDrawer: React.FC = () => {
     setInspectorOpen,
     updateNode,
     updateNodeColor,
+    updateNodeShape,
     toggleCompletion,
     setNodeStatus,
     addNode,
@@ -62,16 +64,26 @@ export const NodeDetailsDrawer: React.FC = () => {
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
+  const lastNodeIdRef = useRef<string | null>(null);
+  const debounceNotesRef = useRef<NodeJS.Timeout | null>(null);
 
   const node = selectedNodeId ? doc.nodes[selectedNodeId] : null;
 
-  // Sync state whenever selected node changes
+  // Sync state ONLY when switching to a different node
   useEffect(() => {
-    if (node) {
+    if (node && node.id !== lastNodeIdRef.current) {
+      lastNodeIdRef.current = node.id;
       setNotesText(node.notes || '');
       setTitleText(node.title || '');
     }
-  }, [node?.id, node?.notes, node?.title]);
+  }, [node?.id]);
+
+  // Clean up debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceNotesRef.current) clearTimeout(debounceNotesRef.current);
+    };
+  }, []);
 
   // Handle Escape key to close drawer
   useEffect(() => {
@@ -95,12 +107,33 @@ export const NodeDetailsDrawer: React.FC = () => {
 
   const handleNotesChange = (val: string) => {
     setNotesText(val);
-    updateNode(node.id, { notes: val });
+    if (debounceNotesRef.current) {
+      clearTimeout(debounceNotesRef.current);
+    }
+    debounceNotesRef.current = setTimeout(() => {
+      if (node && val !== (node.notes || '')) {
+        updateNode(node.id, { notes: val });
+      }
+    }, 600);
   };
 
-  const handleTitleChange = (val: string) => {
-    setTitleText(val);
-    updateNode(node.id, { title: val });
+  const handleNotesBlur = () => {
+    if (debounceNotesRef.current) {
+      clearTimeout(debounceNotesRef.current);
+    }
+    if (node && notesText !== (node.notes || '')) {
+      updateNode(node.id, { notes: notesText });
+    }
+  };
+
+  const handleTitleSubmit = () => {
+    if (!node) return;
+    const clean = titleText.trim();
+    if (clean && clean !== node.title) {
+      updateNode(node.id, { title: clean });
+    } else {
+      setTitleText(node.title);
+    }
   };
 
   // Markdown formatting toolbar action helper
@@ -156,8 +189,8 @@ export const NodeDetailsDrawer: React.FC = () => {
     todo: {
       label: 'To Do',
       icon: Circle,
-      color: 'text-slate-500 dark:text-zinc-400',
-      bg: 'bg-slate-100 dark:bg-zinc-800'
+      color: 'text-slate-500 dark:text-slate-400',
+      bg: 'bg-slate-100 dark:bg-slate-800'
     },
     in_progress: {
       label: 'In Progress',
@@ -176,12 +209,12 @@ export const NodeDetailsDrawer: React.FC = () => {
   return (
     <aside
       ref={drawerRef}
-      className={`fixed top-14 bottom-0 right-0 z-40 flex flex-col bg-white dark:bg-zinc-900 border-l border-slate-200 dark:border-zinc-800 shadow-2xl transition-all duration-300 ease-in-out ${
+      className={`fixed top-14 bottom-0 right-0 z-40 flex flex-col bg-white dark:bg-[#0c1424] border-l border-slate-200 dark:border-slate-800 shadow-2xl transition-all duration-300 ease-in-out ${
         isWide ? 'w-full max-w-2xl' : 'w-full max-w-md'
       }`}
     >
       {/* Top Drawer Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/50">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-[#090f1b]/80">
         <div className="flex items-center gap-2 overflow-hidden">
           <span
             className="px-2 py-0.5 rounded text-[11px] font-bold tracking-wider uppercase shrink-0"
@@ -195,7 +228,7 @@ export const NodeDetailsDrawer: React.FC = () => {
 
           {/* Breadcrumb Hierarchy */}
           {breadcrumbs.length > 0 && (
-            <div className="flex items-center gap-1 text-xs text-slate-400 dark:text-zinc-500 truncate">
+            <div className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-400 truncate">
               {breadcrumbs.map((crumb, idx) => (
                 <React.Fragment key={idx}>
                   <span className="truncate max-w-[120px]">{crumb}</span>
@@ -210,7 +243,7 @@ export const NodeDetailsDrawer: React.FC = () => {
           {/* Focus as Center button */}
           <button
             onClick={() => setActiveCenterId(node.id)}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-slate-100 dark:hover:bg-zinc-800 transition"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
             title="Focus this thought as Center"
           >
             <Tag className="w-4 h-4" />
@@ -219,7 +252,7 @@ export const NodeDetailsDrawer: React.FC = () => {
           {/* Toggle Width button */}
           <button
             onClick={() => setIsWide(!isWide)}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition hidden sm:flex"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition hidden sm:flex"
             title={isWide ? 'Standard drawer width' : 'Expand drawer width'}
           >
             {isWide ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
@@ -228,7 +261,7 @@ export const NodeDetailsDrawer: React.FC = () => {
           {/* Close button */}
           <button
             onClick={() => setInspectorOpen(false)}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
             title="Close Inspector (Esc)"
           >
             <X className="w-4 h-4" />
@@ -240,7 +273,7 @@ export const NodeDetailsDrawer: React.FC = () => {
       <div className="flex-1 overflow-y-auto p-4 space-y-5">
         {/* Title Input & 2-Way Checkbox */}
         <div className="space-y-1.5">
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+          <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-400">
             Thought Title
           </label>
           <div className="flex items-start gap-2.5">
@@ -249,7 +282,7 @@ export const NodeDetailsDrawer: React.FC = () => {
               className={`mt-1 w-5 h-5 rounded-md flex items-center justify-center shrink-0 border transition-colors shadow-2xs ${
                 node.isCompleted
                   ? 'bg-emerald-500 border-emerald-500 text-white'
-                  : 'border-slate-300 dark:border-zinc-700 hover:border-emerald-500 bg-white dark:bg-zinc-950'
+                  : 'border-slate-300 dark:border-slate-700 hover:border-emerald-500 bg-white dark:bg-[#070d18]'
               }`}
               title={node.isCompleted ? 'Mark incomplete' : 'Mark completed (cascades to sub-thoughts)'}
             >
@@ -259,11 +292,17 @@ export const NodeDetailsDrawer: React.FC = () => {
             <input
               type="text"
               value={titleText}
-              onChange={(e) => handleTitleChange(e.target.value)}
-              className={`w-full text-base font-semibold bg-transparent border-b border-transparent hover:border-slate-300 dark:hover:border-zinc-700 focus:border-blue-500 dark:focus:border-blue-500 outline-none pb-1 transition-colors ${
+              onChange={(e) => setTitleText(e.target.value)}
+              onBlur={handleTitleSubmit}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  (e.target as HTMLInputElement).blur();
+                }
+              }}
+              className={`w-full text-base font-semibold bg-transparent border-b border-transparent hover:border-slate-300 dark:hover:border-slate-700 focus:border-blue-500 dark:focus:border-blue-500 outline-none pb-1 transition-colors ${
                 node.isCompleted
-                  ? 'line-through text-slate-400 dark:text-zinc-500'
-                  : 'text-slate-900 dark:text-zinc-50'
+                  ? 'line-through text-slate-400 dark:text-slate-400'
+                  : 'text-slate-900 dark:text-slate-50'
               }`}
               placeholder="Thought title..."
             />
@@ -282,8 +321,8 @@ export const NodeDetailsDrawer: React.FC = () => {
                 onClick={() => setNodeStatus(node.id, status)}
                 className={`flex-1 py-1.5 px-2.5 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition ${
                   isCurrent
-                    ? `${config.bg} ${config.color} font-semibold ring-1 ring-inset ring-slate-300 dark:ring-zinc-700 shadow-2xs`
-                    : 'text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800'
+                    ? `${config.bg} ${config.color} font-semibold ring-1 ring-inset ring-slate-300 dark:ring-slate-700 shadow-2xs`
+                    : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
               >
                 <Icon className="w-3.5 h-3.5" />
@@ -295,8 +334,8 @@ export const NodeDetailsDrawer: React.FC = () => {
 
         {/* Branch / Node Color Palette */}
         {!isRoot && (
-          <div className="flex items-center justify-between py-1 border-t border-slate-100 dark:border-zinc-800/80">
-            <span className="text-xs text-slate-500 dark:text-zinc-400 flex items-center gap-1.5">
+          <div className="flex items-center justify-between py-1 border-t border-slate-100 dark:border-slate-800/80">
+            <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
               <Palette className="w-3.5 h-3.5" /> Branch Color
             </span>
             <div className="flex items-center gap-1.5">
@@ -317,22 +356,56 @@ export const NodeDetailsDrawer: React.FC = () => {
           </div>
         )}
 
+        {/* Node Shape & Style Selector */}
+        {!isRoot && (
+          <div className="flex items-center justify-between py-2 border-t border-slate-100 dark:border-slate-800/80">
+            <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+              <Shapes className="w-3.5 h-3.5" /> Card Shape
+            </span>
+            <div className="flex items-center bg-slate-100 dark:bg-slate-950/80 p-0.5 rounded-lg border border-slate-200 dark:border-slate-800 text-[11px]">
+              {(
+                [
+                  { id: 'rounded', label: 'Card' },
+                  { id: 'pill', label: 'Pill' },
+                  { id: 'dashed', label: 'Dashed' },
+                  { id: 'borderless', label: 'Clean' }
+                ] as { id: NodeShape; label: string }[]
+              ).map((s) => {
+                const isSelected = (node.shape || 'rounded') === s.id;
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => updateNodeShape(node.id, s.id)}
+                    className={`px-2 py-0.5 rounded-md font-medium transition ${
+                      isSelected
+                        ? 'bg-white dark:bg-[#0f172a] text-blue-600 dark:text-blue-400 shadow-xs font-semibold'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Markdown Notes & Description Area */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-zinc-500 flex items-center gap-1.5">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-400 flex items-center gap-1.5">
               <FileText className="w-3.5 h-3.5" />
               Notes & Description (Markdown)
             </label>
 
             {/* Edit / Preview Tabs */}
-            <div className="flex items-center p-0.5 rounded-lg bg-slate-100 dark:bg-zinc-800 text-xs">
+            <div className="flex items-center p-0.5 rounded-lg bg-slate-100 dark:bg-slate-950/90 text-xs">
               <button
                 onClick={() => setActiveTab('edit')}
                 className={`px-2.5 py-1 rounded-md font-medium flex items-center gap-1 transition ${
                   activeTab === 'edit'
-                    ? 'bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 shadow-xs'
-                    : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-200'
+                    ? 'bg-white dark:bg-[#0f172a] text-slate-900 dark:text-slate-100 shadow-xs dark:border dark:border-slate-700/60'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
                 <Edit3 className="w-3 h-3" />
@@ -342,8 +415,8 @@ export const NodeDetailsDrawer: React.FC = () => {
                 onClick={() => setActiveTab('preview')}
                 className={`px-2.5 py-1 rounded-md font-medium flex items-center gap-1 transition ${
                   activeTab === 'preview'
-                    ? 'bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 shadow-xs'
-                    : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-200'
+                    ? 'bg-white dark:bg-[#0f172a] text-slate-900 dark:text-slate-100 shadow-xs dark:border dark:border-slate-700/60'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
                 <Eye className="w-3 h-3" />
@@ -354,61 +427,61 @@ export const NodeDetailsDrawer: React.FC = () => {
 
           {/* Markdown Formatting Toolbar (Visible in Edit mode) */}
           {activeTab === 'edit' && (
-            <div className="flex items-center gap-1 p-1 rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50/80 dark:bg-zinc-900/80 text-slate-600 dark:text-zinc-400 overflow-x-auto text-xs">
+            <div className="flex items-center gap-1 p-1 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-[#090f1b]/80 text-slate-600 dark:text-slate-400 overflow-x-auto text-xs">
               <button
                 onClick={() => insertMarkdown('**', '**', 'bold text')}
-                className="p-1 rounded hover:bg-slate-200 dark:hover:bg-zinc-800"
+                className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-800"
                 title="Bold"
               >
                 <Bold className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={() => insertMarkdown('*', '*', 'italic text')}
-                className="p-1 rounded hover:bg-slate-200 dark:hover:bg-zinc-800"
+                className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-800"
                 title="Italic"
               >
                 <Italic className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={() => insertMarkdown('### ', '', 'Heading')}
-                className="p-1 rounded hover:bg-slate-200 dark:hover:bg-zinc-800"
+                className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-800"
                 title="Heading"
               >
                 <Heading2 className="w-3.5 h-3.5" />
               </button>
-              <div className="w-[1px] h-4 bg-slate-200 dark:bg-zinc-800 mx-0.5" />
+              <div className="w-[1px] h-4 bg-slate-200 dark:bg-slate-800 mx-0.5" />
               <button
                 onClick={() => insertMarkdown('- ', '', 'List item')}
-                className="p-1 rounded hover:bg-slate-200 dark:hover:bg-zinc-800"
+                className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-800"
                 title="Bullet List"
               >
                 <List className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={() => insertMarkdown('1. ', '', 'Numbered item')}
-                className="p-1 rounded hover:bg-slate-200 dark:hover:bg-zinc-800"
+                className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-800"
                 title="Numbered List"
               >
                 <ListOrdered className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={() => insertMarkdown('- [ ] ', '', 'Task item')}
-                className="p-1 rounded hover:bg-slate-200 dark:hover:bg-zinc-800"
+                className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-800"
                 title="Checklist Item"
               >
                 <CheckSquare className="w-3.5 h-3.5" />
               </button>
-              <div className="w-[1px] h-4 bg-slate-200 dark:bg-zinc-800 mx-0.5" />
+              <div className="w-[1px] h-4 bg-slate-200 dark:bg-slate-800 mx-0.5" />
               <button
                 onClick={() => insertMarkdown('`', '`', 'code')}
-                className="p-1 rounded hover:bg-slate-200 dark:hover:bg-zinc-800"
+                className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-800"
                 title="Inline Code"
               >
                 <Code className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={() => insertMarkdown('[', '](https://example.com)', 'Link label')}
-                className="p-1 rounded hover:bg-slate-200 dark:hover:bg-zinc-800"
+                className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-800"
                 title="Insert Link"
               >
                 <Link2 className="w-3.5 h-3.5" />
@@ -423,10 +496,11 @@ export const NodeDetailsDrawer: React.FC = () => {
                 ref={textareaRef}
                 value={notesText}
                 onChange={(e) => handleNotesChange(e.target.value)}
+                onBlur={handleNotesBlur}
                 placeholder="Write detailed notes, software specs, research thoughts, or links in Markdown..."
-                className="w-full min-h-[180px] p-3 text-xs leading-relaxed rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-slate-800 dark:text-zinc-100 placeholder-slate-400 dark:placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 font-mono transition resize-y"
+                className="w-full min-h-[180px] p-3 text-xs leading-relaxed rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#090f1b] text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 font-mono transition resize-y"
               />
-              <div className="flex items-center justify-between text-[10px] text-slate-400 dark:text-zinc-500 mt-1 px-1">
+              <div className="flex items-center justify-between text-[10px] text-slate-400 dark:text-slate-400 mt-1 px-1">
                 <span>Markdown supported (headings, lists, code, links)</span>
                 <span>{notesText.length} characters</span>
               </div>
@@ -441,7 +515,7 @@ export const NodeDetailsDrawer: React.FC = () => {
                   if (href) openSafeUrl(href);
                 }
               }}
-              className="w-full min-h-[180px] p-3 text-xs leading-relaxed rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-950/50 prose prose-sm dark:prose-invert max-w-none prose-p:my-1.5 prose-headings:my-2 prose-ul:my-1 prose-li:my-0.5 prose-pre:my-2 prose-pre:p-2 prose-pre:rounded-lg prose-pre:bg-slate-900 prose-code:text-blue-500 prose-a:text-blue-500 hover:prose-a:underline select-text"
+              className="w-full min-h-[180px] p-3 text-xs leading-relaxed rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-[#090f1b]/50 prose prose-sm dark:prose-invert max-w-none prose-p:my-1.5 prose-headings:my-2 prose-ul:my-1 prose-li:my-0.5 prose-pre:my-2 prose-pre:p-2 prose-pre:rounded-lg prose-pre:bg-slate-900 prose-code:text-blue-500 prose-a:text-blue-500 hover:prose-a:underline select-text"
               dangerouslySetInnerHTML={{ __html: getRenderedMarkdown() }}
             />
           )}
@@ -470,9 +544,9 @@ export const NodeDetailsDrawer: React.FC = () => {
         )}
 
         {/* Direct Sub-thoughts List */}
-        <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-zinc-800/80">
+        <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800/80">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-400">
               Sub-thoughts ({completedChildren}/{children.length})
             </span>
             <button
@@ -484,7 +558,7 @@ export const NodeDetailsDrawer: React.FC = () => {
           </div>
 
           {children.length === 0 ? (
-            <p className="text-xs text-slate-400 dark:text-zinc-500 italic py-1">
+            <p className="text-xs text-slate-400 dark:text-slate-400 italic py-1">
               No sub-thoughts branched yet.
             </p>
           ) : (
@@ -493,7 +567,7 @@ export const NodeDetailsDrawer: React.FC = () => {
                 <div
                   key={child.id}
                   onClick={() => setSelectedNodeId(child.id, true)}
-                  className="flex items-center justify-between gap-2 p-1.5 rounded-lg border border-slate-100 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700 bg-white dark:bg-zinc-950/60 cursor-pointer transition text-xs group"
+                  className="flex items-center justify-between gap-2 p-1.5 rounded-lg border border-slate-100 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white dark:bg-[#0f172a] cursor-pointer transition text-xs group"
                 >
                   <div className="flex items-center gap-2 truncate">
                     <button
@@ -504,7 +578,7 @@ export const NodeDetailsDrawer: React.FC = () => {
                       className={`w-3.5 h-3.5 rounded flex items-center justify-center shrink-0 border ${
                         child.isCompleted
                           ? 'bg-emerald-500 border-emerald-500 text-white'
-                          : 'border-slate-300 dark:border-zinc-700'
+                          : 'border-slate-300 dark:border-slate-700'
                       }`}
                     >
                       {child.isCompleted && <Check className="w-2.5 h-2.5 stroke-[3]" />}
@@ -512,8 +586,8 @@ export const NodeDetailsDrawer: React.FC = () => {
                     <span
                       className={`truncate ${
                         child.isCompleted
-                          ? 'line-through text-slate-400 dark:text-zinc-500'
-                          : 'text-slate-800 dark:text-zinc-200'
+                          ? 'line-through text-slate-400 dark:text-slate-400'
+                          : 'text-slate-800 dark:text-slate-200'
                       }`}
                     >
                       {child.title}

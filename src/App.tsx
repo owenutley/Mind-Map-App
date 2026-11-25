@@ -42,7 +42,7 @@ export const App: React.FC = () => {
   }, [undo, redo, saveCurrentDocument, isInspectorOpen, setInspectorOpen]);
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-slate-50 dark:bg-zinc-950 font-sans">
+    <div className="flex flex-col h-screen w-screen overflow-hidden bg-slate-50 dark:bg-[#070b12] text-slate-900 dark:text-slate-100 font-sans">
       <TopNavbar onOpenVault={() => setIsVaultOpen(true)} />
 
       <main className="flex-1 relative overflow-hidden">

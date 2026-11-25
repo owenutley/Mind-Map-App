@@ -16,8 +16,8 @@ export interface ComputedLayoutResult {
   edges: RFEdge[];
 }
 
-const CARD_WIDTH = 230;
-const CARD_HEIGHT = 85;
+const CARD_WIDTH = 180;
+const CARD_HEIGHT = 48;
 
 /**
  * Computes the Euclidean distance between all 4 parent source ports
@@ -69,7 +69,7 @@ export function computeMindMapLayout(
   const rfNodes: RFNode[] = [];
   const rfEdges: RFEdge[] = [];
 
-  // Add the root / center node at coordinate (0, 0)
+  // Add the central root node at (0, 0)
   rfNodes.push({
     id: rootNode.id,
     type: 'textTile',
@@ -84,24 +84,19 @@ export function computeMindMapLayout(
     }
   });
 
-  // Get direct children of the center node (filter out completed if setting is active)
+  // Direct children of the central node
   const directChildren = Object.values(doc.nodes)
     .filter(n => n.parentId === rootId && (!hideCompleted || !n.isCompleted))
     .sort((a, b) => a.order - b.order);
 
-  // Update root direct children count
   rfNodes[0].data.directChildrenCount = directChildren.length;
 
   if (directChildren.length === 0) {
     return { nodes: rfNodes, edges: rfEdges };
   }
 
-  // 4-Sided Distribution from the root:
-  // Distribute children across Right, Left, Top, Bottom
-  // 1 child -> Right
-  // 2 children -> Right, Left
-  // 3 children -> Right, Left, Bottom
-  // 4+ children -> Right, Left, Bottom, Top cyclically
+  // 4-Sided Radial Distribution from the central node:
+  // Distribute children across Right, Left, Bottom, Top
   const buckets: Record<BranchDirection, MindMapNode[]> = {
     right: [],
     left: [],
@@ -118,11 +113,7 @@ export function computeMindMapLayout(
 
   const buildSubtree = (nodeId: string, direction: BranchDirection): HierarchyDatum => {
     const node = doc.nodes[nodeId];
-
-    // Default L3+ Natural Folding:
-    // If node.isCollapsed is explicitly defined, use that.
-    // If undefined, nodes at level >= 2 default to isCollapsed = true (so L3+ children are hidden by default)
-    const isNodeCollapsed = node.isCollapsed !== undefined ? node.isCollapsed : (node.level >= 2);
+    const isNodeCollapsed = node?.isCollapsed !== undefined ? node.isCollapsed : (node?.level !== undefined && node.level >= 2);
 
     const children = (!isNodeCollapsed)
       ? Object.values(doc.nodes)
@@ -154,12 +145,13 @@ export function computeMindMapLayout(
     };
 
     const rootHierarchy = hierarchy<HierarchyDatum>(virtualRootData);
-
     const isHorizontal = direction === 'right' || direction === 'left';
 
-    // Generous spacing: 390px level separation, 160px sibling separation
+    // Generous spacing:
+    // Horizontal clusters: [sibling vertical spacing: 110px, level horizontal spacing: 320px]
+    // Vertical clusters: [sibling horizontal spacing: 230px, level vertical spacing: 140px]
     const treeLayout = tree<HierarchyDatum>()
-      .nodeSize(isHorizontal ? [160, 390] : [260, 240])
+      .nodeSize(isHorizontal ? [110, 320] : [230, 140])
       .separation((a, b) => (a.parent === b.parent ? 1.05 : 1.35));
 
     const layoutTree = treeLayout(rootHierarchy);
@@ -188,7 +180,6 @@ export function computeMindMapLayout(
         posY = -d.y - 60;
       }
 
-      // If node has manual position, respect it; otherwise use computed pos
       const finalPos = nodeData.position || { x: posX, y: posY };
 
       let incomingSide: Position = Position.Left;
@@ -218,8 +209,7 @@ export function computeMindMapLayout(
       });
 
       // Handle assignment:
-      // If node already has explicit sourceHandle / targetHandle from a "Reconnect" action, use it!
-      // Otherwise, use direction defaults:
+      // If node has explicit handles, respect them; otherwise use direction defaults
       let sourceHandle = nodeData.sourceHandle;
       let targetHandle = nodeData.targetHandle;
 

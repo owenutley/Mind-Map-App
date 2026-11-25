@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { MindMapDocument, MindMapNode, NodeStatus } from '../types/mindmap';
+import { MindMapDocument, MindMapNode, NodeStatus, NodeShape } from '../types/mindmap';
 import { findClosestPortPair } from '../utils/layout';
 
 export type ActiveView = 'canvas' | 'kanban' | 'outline' | 'presentation';
@@ -24,12 +24,14 @@ interface GraphState {
   hideCompleted: boolean;
   isSaving: boolean;
   lastSavedAt: string | null;
+  vaultName: string;
   
   // History for Undo/Redo
   past: MindMapDocument[];
   future: MindMapDocument[];
 
   // Actions
+  setVaultName: (name: string) => void;
   setSelectedNodeId: (id: string | null, openInspector?: boolean) => void;
   setInspectorOpen: (open: boolean) => void;
   setActiveCenterId: (id: string) => void;
@@ -40,6 +42,7 @@ interface GraphState {
   addNode: (parentId: string | null, title?: string, initialDirection?: 'right' | 'left' | 'top' | 'bottom') => string;
   updateNode: (id: string, updates: Partial<MindMapNode>) => void;
   updateNodeColor: (id: string, newColor: string, updateChildren?: boolean) => void;
+  updateNodeShape: (id: string, shape: NodeShape) => void;
   deleteNode: (id: string) => void;
   toggleCompletion: (id: string) => void;
   toggleCollapse: (id: string) => void;
@@ -217,9 +220,11 @@ export const useGraphStore = create<GraphState>((set, get) => {
     hideCompleted: false,
     isSaving: false,
     lastSavedAt: null,
+    vaultName: 'MindMap Vault',
     past: [],
     future: [],
 
+    setVaultName: (name: string) => set({ vaultName: name }),
     setSelectedNodeId: (id, openInspector = true) => set((state) => ({
       selectedNodeId: id,
       isInspectorOpen: id !== null ? (openInspector ? true : state.isInspectorOpen) : false
@@ -252,7 +257,7 @@ export const useGraphStore = create<GraphState>((set, get) => {
         } else if (initialDirection === 'left') {
           sourceHandle = 'left-source';
           targetHandle = 'right-target';
-        } else {
+        } else if (initialDirection === 'right') {
           sourceHandle = 'right-source';
           targetHandle = 'left-target';
         }
@@ -369,6 +374,10 @@ export const useGraphStore = create<GraphState>((set, get) => {
       });
 
       get().saveCurrentDocument();
+    },
+
+    updateNodeShape: (id, shape) => {
+      get().updateNode(id, { shape });
     },
 
     deleteNode: (id) => {

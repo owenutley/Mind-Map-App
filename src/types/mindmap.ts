@@ -1,4 +1,5 @@
 export type NodeStatus = 'todo' | 'in_progress' | 'completed';
+export type NodeShape = 'rounded' | 'pill' | 'dashed' | 'borderless';
 
 export interface MindMapNode {
   id: string;
@@ -10,6 +11,7 @@ export interface MindMapNode {
   status: NodeStatus;            // 'todo' | 'in_progress' | 'completed'
   isCompleted: boolean;          // Quick toggle (status === 'completed')
   color?: string;                // Custom node color or branch tint
+  shape?: NodeShape;             // 'rounded' | 'pill' | 'dashed' | 'borderless'
   isCollapsed?: boolean;         // Child branch collapsing
   position?: { x: number; y: number }; // Optional persisted custom coordinates
   sourceHandle?: string;         // 'top-source' | 'right-source' | 'bottom-source' | 'left-source'

@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Handle, Position } from '@xyflow/react';
-import { Check, Plus, Focus, Trash2, CheckCircle2, Magnet, Palette, FileText } from 'lucide-react';
+import { Check, Plus, FileText, Edit2 } from 'lucide-react';
 import { MindMapNode } from '../../types/mindmap';
-import { useGraphStore, BRANCH_PALETTE } from '../../store/graphStore';
+import { useGraphStore } from '../../store/graphStore';
 
 interface TextTileNodeProps {
   id: string;
@@ -21,59 +21,44 @@ export const TextTileNode: React.FC<TextTileNodeProps> = ({ id, data, selected }
   const { node, isRoot, incomingSide = null, isCollapsed = false, directChildrenCount = 0 } = data;
   const {
     updateNode,
-    updateNodeColor,
     addNode,
-    deleteNode,
     toggleCompletion,
     toggleCollapse,
-    setActiveCenterId,
-    activeCenterId,
-    reconnectToParentClosest,
-    setSelectedNodeId,
-    document: doc
+    setSelectedNodeId
   } = useGraphStore();
 
   const [isEditing, setIsEditing] = useState(false);
-  const [showColorPicker, setShowColorPicker] = useState(false);
   const [titleText, setTitleText] = useState(node.title);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const colorPickerRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    setTitleText(node.title);
-  }, [node.title]);
+    if (!isEditing) {
+      setTitleText(node.title);
+    }
+  }, [node.title, isEditing]);
 
   useEffect(() => {
-    if (isEditing && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
+    if (isEditing && textareaRef.current) {
+      textareaRef.current.focus();
+      textareaRef.current.select();
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
     }
   }, [isEditing]);
 
-  // Click outside listener for color picker
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (colorPickerRef.current && !colorPickerRef.current.contains(e.target as Node)) {
-        setShowColorPicker(false);
-      }
-    };
-    if (showColorPicker) {
-      window.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => window.removeEventListener('mousedown', handleClickOutside);
-  }, [showColorPicker]);
-
   const handleBlur = () => {
     setIsEditing(false);
-    if (titleText.trim() && titleText !== node.title) {
-      updateNode(id, { title: titleText.trim() });
+    const trimmed = titleText.trim();
+    if (trimmed && trimmed !== node.title) {
+      updateNode(id, { title: trimmed });
     } else {
       setTitleText(node.title);
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
       handleBlur();
     } else if (e.key === 'Escape') {
       setTitleText(node.title);
@@ -81,11 +66,8 @@ export const TextTileNode: React.FC<TextTileNodeProps> = ({ id, data, selected }
     }
   };
 
-  // Child completion progress
-  const children = Object.values(doc.nodes).filter(n => n.parentId === id);
-  const completedChildren = children.filter(n => n.isCompleted).length;
-  const hasChildren = children.length > 0;
-  const isCurrentCenter = activeCenterId === id;
+  const nodeColor = isRoot ? '#6366f1' : (node.color || '#3b82f6');
+  const hasNotes = Boolean(node.notes?.trim());
 
   // Determine incoming target side
   let effectiveIncoming = incomingSide;
@@ -96,40 +78,48 @@ export const TextTileNode: React.FC<TextTileNodeProps> = ({ id, data, selected }
     else if (node.targetHandle.startsWith('right')) effectiveIncoming = Position.Right;
   }
 
-  const isLeftIncoming = effectiveIncoming === Position.Left;
-  const isRightIncoming = effectiveIncoming === Position.Right;
-  const isTopIncoming = effectiveIncoming === Position.Top;
-  const isBottomIncoming = effectiveIncoming === Position.Bottom;
+  const isLeftIncoming = !isRoot && effectiveIncoming === Position.Left;
+  const isRightIncoming = !isRoot && effectiveIncoming === Position.Right;
+  const isTopIncoming = !isRoot && effectiveIncoming === Position.Top;
+  const isBottomIncoming = !isRoot && effectiveIncoming === Position.Bottom;
 
   return (
     <div
-      className={`relative group rounded-xl transition-all duration-200 border px-3.5 py-2.5 w-[230px] shadow-sm select-none ${
+      onClick={(e) => {
+        e.stopPropagation();
+        setSelectedNodeId(id, true);
+      }}
+      className={`relative group flex items-start gap-2 rounded-[20px] px-3.5 py-2 transition-all duration-150 select-none cursor-pointer border shadow-xs ${
+        isRoot
+          ? 'w-[210px] text-sm font-semibold shadow-md dark:shadow-[0_0_20px_rgba(99,102,241,0.25)]'
+          : 'w-[180px] text-xs font-medium'
+      } ${
         selected
-          ? 'ring-2 ring-blue-500 shadow-md ring-offset-2 dark:ring-offset-zinc-950'
-          : isRoot
-          ? 'shadow-md dark:shadow-[0_0_20px_rgba(255,255,255,0.12)] hover:border-slate-300 dark:hover:border-zinc-700'
-          : 'hover:border-slate-300 dark:hover:border-zinc-700'
+          ? 'ring-2 ring-blue-500 shadow-md ring-offset-2 dark:ring-offset-[#070b12]'
+          : 'hover:border-slate-300 dark:hover:border-slate-700'
       } ${
         node.isCompleted
-          ? 'bg-slate-50/75 dark:bg-zinc-900/40 border-slate-200 dark:border-zinc-800/80 opacity-70'
-          : 'bg-white dark:bg-zinc-900 border-slate-200/90 dark:border-zinc-800 text-slate-800 dark:text-zinc-100'
+          ? 'bg-slate-50 dark:bg-[#0a101d] border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-500'
+          : isRoot
+          ? 'bg-white dark:bg-[#111c34] border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-50'
+          : 'bg-white dark:bg-[#0f172a] border-slate-200/90 dark:border-slate-800 text-slate-800 dark:text-slate-100'
       }`}
       style={{
         borderLeftWidth: '4px',
-        borderLeftColor: isRoot ? '#64748b' : (node.color || '#3b82f6')
+        borderLeftColor: nodeColor
       }}
     >
       {/* ======================================================== */}
-      {/* 4-SIDED CONNECTION HANDLES WITH PARENT EXCLUSION RULE */}
+      {/* 4-SIDED CONNECTION HANDLES & QUICK ADD BRANCH BUTTONS    */}
       {/* ======================================================== */}
 
-      {/* TOP HANDLE */}
+      {/* TOP */}
       {isTopIncoming ? (
         <Handle
           type="target"
           id="top-target"
           position={Position.Top}
-          className="!w-2.5 !h-2.5 !-top-1.5 !bg-amber-500 !border-2 !border-white dark:!border-zinc-900"
+          className="!w-2 !h-2 !-top-1 !bg-amber-500 !border-2 !border-white dark:!border-[#0f172a] !transition-transform group-hover:!scale-125"
           title="Incoming parent connection (Top)"
         />
       ) : (
@@ -138,31 +128,31 @@ export const TextTileNode: React.FC<TextTileNodeProps> = ({ id, data, selected }
             type="source"
             id="top-source"
             position={Position.Top}
-            className="!w-2.5 !h-2.5 !-top-1.5 !border-2 !border-white dark:!border-zinc-900 opacity-60 group-hover:opacity-100 transition-opacity"
-            style={{ backgroundColor: node.color || '#3b82f6' }}
-            title="Branch from Top"
+            className="!w-2 !h-2 !-top-1 !border-2 !border-white dark:!border-[#0f172a] opacity-0 group-hover:opacity-100 !transition-all hover:!scale-125"
+            style={{ backgroundColor: nodeColor }}
+            title="Branch Top"
           />
           <button
             onClick={(e) => {
               e.stopPropagation();
               addNode(id, 'New Thought', 'top');
             }}
-            className="absolute -top-3 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:scale-125 z-10 shadow-xs text-[10px]"
-            style={{ backgroundColor: node.color || '#3b82f6' }}
-            title="Add Branch (Top)"
+            className="absolute -top-3.5 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:scale-125 z-20 shadow-xs text-[10px] font-bold"
+            style={{ backgroundColor: nodeColor }}
+            title="Add branch (Top)"
           >
-            +
+            <Plus className="w-2.5 h-2.5" />
           </button>
         </>
       )}
 
-      {/* BOTTOM HANDLE */}
+      {/* BOTTOM */}
       {isBottomIncoming ? (
         <Handle
           type="target"
           id="bottom-target"
           position={Position.Bottom}
-          className="!w-2.5 !h-2.5 !-bottom-1.5 !bg-amber-500 !border-2 !border-white dark:!border-zinc-900"
+          className="!w-2 !h-2 !-bottom-1 !bg-amber-500 !border-2 !border-white dark:!border-[#0f172a] !transition-transform group-hover:!scale-125"
           title="Incoming parent connection (Bottom)"
         />
       ) : (
@@ -171,31 +161,31 @@ export const TextTileNode: React.FC<TextTileNodeProps> = ({ id, data, selected }
             type="source"
             id="bottom-source"
             position={Position.Bottom}
-            className="!w-2.5 !h-2.5 !-bottom-1.5 !border-2 !border-white dark:!border-zinc-900 opacity-60 group-hover:opacity-100 transition-opacity"
-            style={{ backgroundColor: node.color || '#3b82f6' }}
-            title="Branch from Bottom"
+            className="!w-2 !h-2 !-bottom-1 !border-2 !border-white dark:!border-[#0f172a] opacity-0 group-hover:opacity-100 !transition-all hover:!scale-125"
+            style={{ backgroundColor: nodeColor }}
+            title="Branch Bottom"
           />
           <button
             onClick={(e) => {
               e.stopPropagation();
               addNode(id, 'New Thought', 'bottom');
             }}
-            className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:scale-125 z-10 shadow-xs text-[10px]"
-            style={{ backgroundColor: node.color || '#3b82f6' }}
-            title="Add Branch (Bottom)"
+            className="absolute -bottom-3.5 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:scale-125 z-20 shadow-xs text-[10px] font-bold"
+            style={{ backgroundColor: nodeColor }}
+            title="Add branch (Bottom)"
           >
-            +
+            <Plus className="w-2.5 h-2.5" />
           </button>
         </>
       )}
 
-      {/* LEFT HANDLE */}
+      {/* LEFT */}
       {isLeftIncoming ? (
         <Handle
           type="target"
           id="left-target"
           position={Position.Left}
-          className="!w-2.5 !h-2.5 !-left-1.5 !bg-amber-500 !border-2 !border-white dark:!border-zinc-900"
+          className="!w-2 !h-2 !-left-1 !bg-amber-500 !border-2 !border-white dark:!border-[#0f172a] !transition-transform group-hover:!scale-125"
           title="Incoming parent connection (Left)"
         />
       ) : (
@@ -204,31 +194,31 @@ export const TextTileNode: React.FC<TextTileNodeProps> = ({ id, data, selected }
             type="source"
             id="left-source"
             position={Position.Left}
-            className="!w-2.5 !h-2.5 !-left-1.5 !border-2 !border-white dark:!border-zinc-900 opacity-60 group-hover:opacity-100 transition-opacity"
-            style={{ backgroundColor: node.color || '#3b82f6' }}
-            title="Branch from Left"
+            className="!w-2 !h-2 !-left-1 !border-2 !border-white dark:!border-[#0f172a] opacity-0 group-hover:opacity-100 !transition-all hover:!scale-125"
+            style={{ backgroundColor: nodeColor }}
+            title="Branch Left"
           />
           <button
             onClick={(e) => {
               e.stopPropagation();
               addNode(id, 'New Thought', 'left');
             }}
-            className="absolute -left-3 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:scale-125 z-10 shadow-xs text-[10px]"
-            style={{ backgroundColor: node.color || '#3b82f6' }}
-            title="Add Branch (Left)"
+            className="absolute -left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:scale-125 z-20 shadow-xs text-[10px] font-bold"
+            style={{ backgroundColor: nodeColor }}
+            title="Add branch (Left)"
           >
-            +
+            <Plus className="w-2.5 h-2.5" />
           </button>
         </>
       )}
 
-      {/* RIGHT HANDLE */}
+      {/* RIGHT */}
       {isRightIncoming ? (
         <Handle
           type="target"
           id="right-target"
           position={Position.Right}
-          className="!w-2.5 !h-2.5 !-right-1.5 !bg-amber-500 !border-2 !border-white dark:!border-zinc-900"
+          className="!w-2 !h-2 !-right-1 !bg-amber-500 !border-2 !border-white dark:!border-[#0f172a] !transition-transform group-hover:!scale-125"
           title="Incoming parent connection (Right)"
         />
       ) : (
@@ -237,270 +227,123 @@ export const TextTileNode: React.FC<TextTileNodeProps> = ({ id, data, selected }
             type="source"
             id="right-source"
             position={Position.Right}
-            className="!w-2.5 !h-2.5 !-right-1.5 !border-2 !border-white dark:!border-zinc-900 opacity-60 group-hover:opacity-100 transition-opacity"
-            style={{ backgroundColor: node.color || '#3b82f6' }}
-            title="Branch from Right"
+            className="!w-2 !h-2 !-right-1 !border-2 !border-white dark:!border-[#0f172a] opacity-0 group-hover:opacity-100 !transition-all hover:!scale-125"
+            style={{ backgroundColor: nodeColor }}
+            title="Branch Right"
           />
           <button
             onClick={(e) => {
               e.stopPropagation();
               addNode(id, 'New Thought', 'right');
             }}
-            className="absolute -right-3 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:scale-125 z-10 shadow-xs text-[10px]"
-            style={{ backgroundColor: node.color || '#3b82f6' }}
-            title="Add Branch (Right)"
+            className="absolute -right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:scale-125 z-20 shadow-xs text-[10px] font-bold"
+            style={{ backgroundColor: nodeColor }}
+            title="Add branch (Right)"
           >
-            +
+            <Plus className="w-2.5 h-2.5" />
           </button>
         </>
       )}
 
-      {/* ======================================================== */}
-      {/* COLOR PICKER POPOVER */}
-      {/* ======================================================== */}
-      {showColorPicker && (
-        <div
-          ref={colorPickerRef}
-          onClick={(e) => e.stopPropagation()}
-          className="absolute top-9 left-2 z-50 p-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-xl flex flex-col gap-2 animate-in fade-in zoom-in-95 duration-150"
-        >
-          <div className="text-[10px] font-bold text-slate-500 dark:text-zinc-400 px-0.5 uppercase tracking-wider">
-            Branch Color
-          </div>
-          <div className="grid grid-cols-4 gap-1.5">
-            {BRANCH_PALETTE.map((color) => (
-              <button
-                key={color}
-                onClick={() => {
-                  updateNodeColor(id, color, true);
-                  setShowColorPicker(false);
-                }}
-                className={`w-5 h-5 rounded-full transition hover:scale-125 border-2 ${
-                  node.color === color ? 'border-slate-800 dark:border-white scale-110 shadow-xs' : 'border-white dark:border-zinc-900'
-                }`}
-                style={{ backgroundColor: color }}
-                title={color}
-              />
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Color indicator dot */}
+      <span
+        className="mt-1 w-2.5 h-2.5 rounded-full shrink-0 shadow-xs border border-white/60 dark:border-black/30"
+        style={{ backgroundColor: nodeColor }}
+      />
 
-      {/* ======================================================== */}
-      {/* CARD CONTENT */}
-      {/* ======================================================== */}
+      {/* Completion checkbox */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          toggleCompletion(id);
+        }}
+        className={`mt-0.5 w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0 transition-colors border ${
+          node.isCompleted
+            ? 'bg-emerald-500 border-emerald-500 text-white'
+            : 'border-slate-300 dark:border-slate-600 hover:border-emerald-500 bg-white/50 dark:bg-slate-900/50'
+        }`}
+        title={node.isCompleted ? 'Mark incomplete' : 'Mark completed'}
+      >
+        {node.isCompleted && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+      </button>
 
-      {/* Top Header: Level Badge, Color Dot, Progress, Actions */}
-      <div className="flex items-center justify-between gap-1 mb-1.5">
-        <div className="flex items-center gap-1.5">
-          <span
-            className={`text-[10px] font-semibold tracking-wider uppercase px-1.5 py-0.5 rounded ${
-              isRoot
-                ? 'bg-slate-100 text-slate-800 dark:bg-zinc-800 dark:text-zinc-200 border border-slate-200 dark:border-zinc-700 font-bold'
-                : 'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400'
-            }`}
-          >
-            {isRoot ? 'Center' : `L${node.level}`}
-          </span>
-
-          {/* Color Indicator Dot */}
-          {!isRoot && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowColorPicker(!showColorPicker);
-              }}
-              className="w-2.5 h-2.5 rounded-full hover:scale-125 transition shrink-0 shadow-xs border border-white dark:border-zinc-900"
-              style={{ backgroundColor: node.color || '#3b82f6' }}
-              title="Click to change branch color"
-            />
-          )}
-
-          {hasChildren && (
-            <span className="text-[10px] text-slate-400 dark:text-zinc-500 flex items-center gap-0.5 font-medium">
-              <CheckCircle2 className="w-2.5 h-2.5 text-emerald-500" />
-              {completedChildren}/{children.length}
-            </span>
-          )}
-
-          {/* Notes indicator badge if notes exist */}
-          {Boolean(node.notes?.trim()) && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setSelectedNodeId(id, true);
-              }}
-              className="p-0.5 rounded text-blue-500 hover:text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-zinc-800 transition"
-              title="Has notes & description (click to open inspector)"
-            >
-              <FileText className="w-3 h-3" />
-            </button>
-          )}
-
-          {/* Progressive Disclosure: Fold / Unfold Badge */}
-          {directChildrenCount > 0 && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleCollapse(id);
-              }}
-              className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold transition flex items-center gap-0.5 cursor-pointer shadow-2xs ${
-                isCollapsed
-                  ? 'bg-blue-600 hover:bg-blue-500 text-white animate-pulse'
-                  : 'bg-slate-200 dark:bg-zinc-800 hover:bg-slate-300 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-300'
-              }`}
-              title={isCollapsed ? `Expand ${directChildrenCount} hidden sub-thoughts (L${node.level + 1}+)` : 'Collapse sub-thoughts'}
-            >
-              {isCollapsed ? `+${directChildrenCount}` : '−'}
-            </button>
-          )}
-        </div>
-
-        {/* Hover Quick Action Buttons */}
-        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-          {/* Inspect Details & Markdown Notes */}
-          <button
-            title="Inspect Details & Notes"
-            onClick={(e) => {
-              e.stopPropagation();
-              setSelectedNodeId(id, true);
-            }}
-            className="p-1 rounded text-slate-400 hover:text-blue-500 hover:bg-slate-100 dark:hover:bg-zinc-800 transition"
-          >
-            <FileText className="w-3.5 h-3.5" />
-          </button>
-
-          {/* Color Palette Picker Button */}
-          {!isRoot && (
-            <button
-              title="Change Branch Color"
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowColorPicker(!showColorPicker);
-              }}
-              className="p-1 rounded text-slate-400 hover:text-purple-500 hover:bg-slate-100 dark:hover:bg-zinc-800 transition"
-            >
-              <Palette className="w-3.5 h-3.5" />
-            </button>
-          )}
-
-          {/* Reconnect to Closest Points on Parent */}
-          {!isRoot && (
-            <button
-              title="Reconnect to Parent (connect closest points)"
-              onClick={(e) => {
-                e.stopPropagation();
-                reconnectToParentClosest(id);
-              }}
-              className="p-1 rounded text-slate-400 hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-zinc-800 transition"
-            >
-              <Magnet className="w-3.5 h-3.5" />
-            </button>
-          )}
-
-          <button
-            title="Focus / Hoist as Center"
-            onClick={(e) => {
-              e.stopPropagation();
-              setActiveCenterId(isCurrentCenter ? doc.rootNodeId : id);
-            }}
-            className={`p-1 rounded hover:bg-slate-100 dark:hover:bg-zinc-800 transition ${
-              isCurrentCenter ? 'text-blue-500' : 'text-slate-400 dark:text-zinc-500'
-            }`}
-          >
-            <Focus className="w-3.5 h-3.5" />
-          </button>
-
-          <button
-            title="Branch Child Thought"
-            onClick={(e) => {
-              e.stopPropagation();
-              addNode(id, 'New Idea');
-            }}
-            className="p-1 rounded text-slate-400 hover:text-blue-500 hover:bg-slate-100 dark:hover:bg-zinc-800 transition"
-          >
-            <Plus className="w-3.5 h-3.5" />
-          </button>
-
-          {!isRoot && (
-            <button
-              title="Delete Thought"
-              onClick={(e) => {
-                e.stopPropagation();
-                deleteNode(id);
-              }}
-              className="p-1 rounded text-slate-400 hover:text-red-500 hover:bg-slate-100 dark:hover:bg-zinc-800 transition"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Main Body: Completion Checkbox & Title */}
-      <div className="flex items-start gap-2.5">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            toggleCompletion(id);
-          }}
-          className={`mt-0.5 w-4 h-4 rounded flex items-center justify-center shrink-0 transition-colors border ${
-            node.isCompleted
-              ? 'bg-emerald-500 border-emerald-500 text-white'
-              : 'border-slate-300 dark:border-zinc-700 hover:border-emerald-500 bg-white dark:bg-zinc-950'
-          }`}
-          title={node.isCompleted ? 'Mark incomplete' : 'Mark completed'}
-        >
-          {node.isCompleted && <Check className="w-3 h-3 stroke-[3]" />}
-        </button>
-
+      {/* Node Title / Inline Editor (extends down with text) */}
+      <div className="flex-1 min-w-0">
         {isEditing ? (
-          <input
-            ref={inputRef}
-            type="text"
+          <textarea
+            ref={textareaRef}
+            rows={1}
             value={titleText}
-            onChange={(e) => setTitleText(e.target.value)}
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+            onDoubleClick={(e) => e.stopPropagation()}
+            onChange={(e) => {
+              setTitleText(e.target.value);
+              e.target.style.height = 'auto';
+              e.target.style.height = `${e.target.scrollHeight}px`;
+            }}
             onBlur={handleBlur}
             onKeyDown={handleKeyDown}
-            className={`w-full text-xs font-semibold bg-transparent border-b border-blue-500 outline-none px-0 py-0 ${
-              isRoot ? 'text-slate-900 dark:text-zinc-50 font-bold' : 'text-slate-900 dark:text-zinc-100'
+            className={`nodrag nopan nowheel w-full bg-transparent border-b border-blue-500 outline-none resize-none overflow-hidden px-0 py-0 leading-snug cursor-text select-text ${
+              isRoot ? 'font-bold text-sm text-slate-900 dark:text-slate-50' : 'text-xs text-slate-900 dark:text-slate-100'
             }`}
           />
         ) : (
           <div
-            onDoubleClick={() => setIsEditing(true)}
-            className={`text-xs leading-snug cursor-text font-semibold select-text break-words w-full ${
-              node.isCompleted
-                ? 'line-through text-slate-400 dark:text-zinc-500'
-                : isRoot
-                ? 'text-slate-900 dark:text-zinc-50 font-bold'
-                : 'text-slate-800 dark:text-zinc-100'
-            }`}
-            title="Double click to edit"
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              setIsEditing(true);
+            }}
+            className="group/title flex items-start justify-between gap-1 cursor-text"
+            title="Double-click to edit title"
           >
-            {node.title}
+            <span
+              className={`block break-words whitespace-normal leading-snug ${
+                node.isCompleted ? 'line-through text-slate-400 dark:text-slate-500' : ''
+              }`}
+            >
+              {node.title}
+            </span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsEditing(true);
+              }}
+              className="opacity-0 group-hover/title:opacity-100 p-0.5 rounded text-slate-400 hover:text-blue-500 transition shrink-0"
+              title="Edit Title"
+            >
+              <Edit2 className="w-2.5 h-2.5" />
+            </button>
           </div>
         )}
       </div>
 
-      {/* Notes preview if available */}
-      {Boolean(node.notes?.trim()) && (
-        <div
-          onClick={(e) => {
-            e.stopPropagation();
-            setSelectedNodeId(id, true);
-          }}
-          className={`mt-2 pt-1.5 border-t border-slate-100 dark:border-zinc-800/80 flex items-center gap-1.5 text-[11px] cursor-pointer hover:text-blue-500 dark:hover:text-blue-400 transition group/note ${
-            isRoot ? 'text-slate-500 dark:text-zinc-400' : 'text-slate-400 dark:text-zinc-500'
-          }`}
-          title="Click to view/edit description in Inspector"
-        >
-          <FileText className="w-3 h-3 shrink-0 opacity-60 group-hover/note:opacity-100 group-hover/note:text-blue-500" />
-          <span className="line-clamp-1 italic truncate">
-            {node.notes}
+      {/* Trailing items: Notes indicator & Collapse badge */}
+      <div className="shrink-0 flex items-center gap-1 mt-0.5">
+        {hasNotes && (
+          <span title="Has notes (inspect in sidebar)" className="flex items-center">
+            <FileText className="w-3 h-3 text-blue-500/80 dark:text-blue-400/80" />
           </span>
-        </div>
-      )}
+        )}
+
+        {directChildrenCount > 0 && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleCollapse(id);
+            }}
+            className={`px-1.5 py-0.2 rounded-full text-[9px] font-bold shrink-0 transition cursor-pointer ${
+              isCollapsed
+                ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-xs'
+                : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400'
+            }`}
+            title={isCollapsed ? `Expand ${directChildrenCount} sub-thoughts` : 'Collapse sub-thoughts'}
+          >
+            {isCollapsed ? `+${directChildrenCount}` : '−'}
+          </button>
+        )}
+      </div>
     </div>
   );
 };

@@ -31,15 +31,15 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
   return (
     <div
       ref={setNodeRef}
-      className={`flex flex-col flex-1 min-w-[300px] max-w-[420px] rounded-2xl bg-slate-100/70 dark:bg-zinc-900/40 border border-slate-200/80 dark:border-zinc-800/80 p-3.5 transition-colors duration-150 ${
+      className={`flex flex-col flex-1 min-w-[300px] max-w-[420px] rounded-2xl bg-slate-100/70 dark:bg-[#0b1324]/80 border border-slate-200/80 dark:border-slate-800/80 p-3.5 transition-colors duration-150 ${
         isOver ? 'ring-2 ring-blue-500/50 bg-blue-50/20 dark:bg-blue-950/20' : ''
       }`}
     >
       {/* Column Header */}
-      <div className="flex items-center justify-between pb-3 mb-2 border-b border-slate-200/60 dark:border-zinc-800/60">
+      <div className="flex items-center justify-between pb-3 mb-2 border-b border-slate-200/60 dark:border-slate-800/60">
         <div className="flex items-center gap-2">
           <span className={`w-2.5 h-2.5 rounded-full ${colorClass}`} />
-          <h3 className="text-sm font-semibold text-slate-800 dark:text-zinc-200">
+          <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
             {title}
           </h3>
           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${badgeBg}`}>
@@ -49,7 +49,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
 
         <button
           onClick={() => onQuickAdd(id)}
-          className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200 hover:bg-white dark:hover:bg-zinc-800 transition"
+          className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-white dark:hover:bg-slate-800 transition"
           title={`Add item to ${title}`}
         >
           <Plus className="w-4 h-4" />
@@ -65,7 +65,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
         </SortableContext>
 
         {nodes.length === 0 && (
-          <div className="h-32 border-2 border-dashed border-slate-200 dark:border-zinc-800/80 rounded-xl flex items-center justify-center text-xs text-slate-400 dark:text-zinc-600">
+          <div className="h-32 border-2 border-dashed border-slate-200 dark:border-slate-800/80 rounded-xl flex items-center justify-center text-xs text-slate-400 dark:text-slate-500">
             Drop thoughts here
           </div>
         )}

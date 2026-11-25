@@ -5,13 +5,37 @@ import * as os from 'os';
 
 let mainWindow: BrowserWindow | null = null;
 
-const getVaultDirectory = (): string => {
+const getVaultConfigPath = (): string => {
+  return path.join(app.getPath('userData'), 'vault-config.json');
+};
+
+const getVaultConfig = async (): Promise<{ vaultName: string }> => {
+  try {
+    const raw = await fs.readFile(getVaultConfigPath(), 'utf-8');
+    return JSON.parse(raw);
+  } catch {
+    return { vaultName: 'MindMap Vault' };
+  }
+};
+
+const setVaultConfig = async (config: { vaultName: string }): Promise<void> => {
+  try {
+    const configPath = getVaultConfigPath();
+    await fs.mkdir(path.dirname(configPath), { recursive: true });
+    await fs.writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('Failed to save vault config:', err);
+  }
+};
+
+const getVaultDirectory = async (): Promise<string> => {
   const docsDir = path.join(os.homedir(), 'Documents');
-  return path.join(docsDir, 'MindMap Vault');
+  const config = await getVaultConfig();
+  return path.join(docsDir, config.vaultName || 'MindMap Vault');
 };
 
 const ensureVaultDir = async (): Promise<string> => {
-  const vaultDir = getVaultDirectory();
+  const vaultDir = await getVaultDirectory();
   try {
     await fs.access(vaultDir);
   } catch {
@@ -84,6 +108,37 @@ ipcMain.handle('shell:open-external', async (_event, url: string) => {
 
 ipcMain.handle('vault:get-path', async () => {
   return await ensureVaultDir();
+});
+
+ipcMain.handle('vault:get-vault-name', async () => {
+  const config = await getVaultConfig();
+  return config.vaultName || 'MindMap Vault';
+});
+
+ipcMain.handle('vault:rename-vault', async (_, newName: string) => {
+  const cleanName = (newName || '').trim().replace(/[/\\?%*:|"<>]/g, '_');
+  if (!cleanName) return { success: false, error: 'Invalid vault name' };
+
+  const docsDir = path.join(os.homedir(), 'Documents');
+  const currentVaultDir = await getVaultDirectory();
+  const newVaultDir = path.join(docsDir, cleanName);
+
+  if (currentVaultDir !== newVaultDir) {
+    try {
+      try {
+        await fs.access(currentVaultDir);
+        await fs.rename(currentVaultDir, newVaultDir);
+      } catch {
+        await fs.mkdir(newVaultDir, { recursive: true });
+      }
+    } catch (err: any) {
+      console.error('Failed to rename vault folder:', err);
+      return { success: false, error: err.message };
+    }
+  }
+
+  await setVaultConfig({ vaultName: cleanName });
+  return { success: true, vaultName: cleanName, vaultPath: newVaultDir };
 });
 
 ipcMain.handle('vault:list-maps', async () => {

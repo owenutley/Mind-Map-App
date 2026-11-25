@@ -44,12 +44,12 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({ node }) => {
     <div
       ref={setNodeRef}
       style={style}
-      className={`group relative rounded-xl border p-3 bg-white dark:bg-zinc-900 border-slate-200 dark:border-zinc-800 shadow-sm transition hover:shadow-md hover:border-slate-300 dark:hover:border-zinc-700 ${
-        node.isCompleted ? 'opacity-75' : ''
+      className={`group relative rounded-xl border p-3 bg-white dark:bg-[#0f172a] border-slate-200 dark:border-slate-800 shadow-sm transition hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 ${
+        node.isCompleted ? 'dark:bg-[#0b1220]' : ''
       }`}
     >
       {/* Top Header: Breadcrumbs & Drag Handle */}
-      <div className="flex items-center justify-between gap-1 mb-1.5 text-[11px] text-slate-400 dark:text-zinc-500">
+      <div className="flex items-center justify-between gap-1 mb-1.5 text-[11px] text-slate-400 dark:text-slate-400">
         <div className="flex items-center gap-1 overflow-hidden truncate">
           <span
             className="px-1.5 py-0.5 rounded text-[10px] font-semibold tracking-wide uppercase shrink-0"
@@ -73,7 +73,7 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({ node }) => {
         <div
           {...attributes}
           {...listeners}
-          className="cursor-grab active:cursor-grabbing p-1 rounded hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-400"
+          className="cursor-grab active:cursor-grabbing p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400"
         >
           <GripVertical className="w-3.5 h-3.5" />
         </div>
@@ -86,7 +86,7 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({ node }) => {
           className={`mt-0.5 w-4 h-4 rounded flex items-center justify-center shrink-0 border transition-colors ${
             node.isCompleted
               ? 'bg-emerald-500 border-emerald-500 text-white'
-              : 'border-slate-300 dark:border-zinc-700 hover:border-emerald-500 bg-white dark:bg-zinc-950'
+              : 'border-slate-300 dark:border-slate-700 hover:border-emerald-500 bg-white dark:bg-[#070d18]'
           }`}
         >
           {node.isCompleted && <Check className="w-3 h-3 stroke-[3]" />}
@@ -99,8 +99,8 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({ node }) => {
             }}
             className={`text-sm font-medium leading-snug cursor-pointer ${
               node.isCompleted
-                ? 'line-through text-slate-400 dark:text-zinc-500'
-                : 'text-slate-800 dark:text-zinc-100'
+                ? 'line-through text-slate-400 dark:text-slate-400'
+                : 'text-slate-800 dark:text-slate-100'
             }`}
           >
             {node.title}
@@ -109,7 +109,7 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({ node }) => {
           {node.notes && (
             <p
               onClick={() => setSelectedNodeId(node.id, true)}
-              className="mt-1 text-xs text-slate-400 dark:text-zinc-500 line-clamp-2 cursor-pointer hover:text-blue-500 dark:hover:text-blue-400 transition"
+              className="mt-1 text-xs text-slate-400 dark:text-slate-400 line-clamp-2 cursor-pointer hover:text-blue-500 dark:hover:text-blue-400 transition"
               title="Click to view/edit notes in inspector"
             >
               {node.notes}
@@ -119,14 +119,14 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({ node }) => {
       </div>
 
       {/* Footer Info: Sub-branches count & Jump to Canvas */}
-      <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-zinc-800/60 flex items-center justify-between text-[11px] text-slate-400 dark:text-zinc-500">
+      <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-400">
         {children.length > 0 ? (
           <span className="flex items-center gap-1 font-medium">
             <CheckCircle2 className="w-3 h-3 text-emerald-500" />
             {completedChildren}/{children.length} sub-tasks
           </span>
         ) : (
-          <span className="text-[10px] text-slate-300 dark:text-zinc-600">Leaf branch</span>
+          <span className="text-[10px] text-slate-300 dark:text-slate-400">Leaf branch</span>
         )}
 
         <button

@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @layer base {
   :root {
     --bg-canvas: #f8fafc;
@@ -11,12 +13,12 @@
   }
 
   .dark {
-    --bg-canvas: #09090b;
-    --canvas-dots: #27272a;
-    --card-bg: #18181b;
-    --card-border: #27272a;
-    --card-text: #f4f4f5;
-    --card-muted: #a1a1aa;
+    --bg-canvas: #090d16;
+    --canvas-dots: #1e293b;
+    --card-bg: #0f172a;
+    --card-border: #1e293b;
+    --card-text: #f8fafc;
+    --card-muted: #94a3b8;
   }
 }
 
@@ -34,7 +36,7 @@
 }
 
 .dark .react-flow__handle {
-  border-color: #18181b;
+  border-color: #0f172a;
 }
 
 /* Custom scrollbars */

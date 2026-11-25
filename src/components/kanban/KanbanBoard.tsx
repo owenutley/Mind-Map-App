@@ -95,15 +95,15 @@ export const KanbanBoard: React.FC = () => {
   }, [doc.nodes]);
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-slate-50 dark:bg-zinc-950 p-6 overflow-hidden">
+    <div className="flex-1 flex flex-col h-full bg-slate-50 dark:bg-[#070b12] p-6 overflow-hidden">
       {/* Board Top Filter Bar */}
-      <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-zinc-800 mb-6 shrink-0">
+      <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800 mb-6 shrink-0">
         <div>
-          <h2 className="text-lg font-bold text-slate-800 dark:text-zinc-100 flex items-center gap-2">
+          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
             <Layers className="w-5 h-5 text-blue-500" />
             Hierarchy-Preserving Kanban
           </h2>
-          <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             Cards track workflow status while keeping their exact level and parent relationships intact.
           </p>
         </div>
@@ -111,11 +111,11 @@ export const KanbanBoard: React.FC = () => {
         {/* Level Filter Dropdown */}
         <div className="flex items-center gap-2">
           <Filter className="w-4 h-4 text-slate-400" />
-          <span className="text-xs text-slate-500 dark:text-zinc-400 font-medium">Filter Level:</span>
+          <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Filter Level:</span>
           <select
             value={levelFilter}
             onChange={(e) => setLevelFilter(e.target.value)}
-            className="text-xs bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-slate-700 dark:text-zinc-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="text-xs bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 rounded-lg px-2.5 py-1.5 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
           >
             <option value="all">All Levels ({Object.keys(doc.nodes).length})</option>
             {availableLevels.map(lvl => (
